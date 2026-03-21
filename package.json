@@ -1,0 +1,33 @@
+{
+  "name": "teampulse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TeamPulse - Productivity Hub collaboration platform",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=client -- --host --port 5173",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspace=server",
+    "test": "npm --workspace=server test",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express-validator": "^7.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.1.6"
+  }
+}

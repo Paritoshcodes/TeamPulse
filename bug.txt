@@ -1,0 +1,281 @@
+TeamPulse Video Call Feature - Full Implementation and Failure Analysis
+Date: 2026-03-21
+
+============================================================
+1) Executive Summary
+============================================================
+The video call feature is implemented as a Socket.IO-based signaling system with WebRTC peer connections on the client. The call lifecycle is now session-driven (ringing -> active -> ended) and includes timeline chat system messages for call start/end.
+
+The primary reason it has not worked reliably on phone/LAN testing is not a single defect but a stack of environment and transport constraints:
+
+1. CORS origin mismatch (main blocker for phone login): phone-origin requests used LAN origins not in strict allow-list.
+2. Frontend endpoint pinning to localhost (main multi-device blocker): if VITE_API_URL/VITE_WS_URL point to localhost, phone tries to call itself.
+3. WebRTC infrastructure limitation (runtime call quality/blocker in some networks): STUN-only config, no TURN fallback.
+4. Operational mismatch after config changes: server/client must be fully restarted for env and CORS changes to apply.
+
+The CORS blocker has been addressed in code by adding development LAN origin handling and env-based origin parsing. However, calls can still fail in real-world networks without TURN.
+
+============================================================
+2) Architecture Overview
+============================================================
+Backend signaling and call session control:
+- File: server/src/sockets/index.js
+- Socket server initialized with auth middleware (JWT token from socket auth/query).
+- In-memory state maps:
+  - onlineUsers: userId -> Set(socketId)
+  - callParticipants: roomId -> Map(socketId -> participant)
+  - callSessions: roomId -> call session object
+- Room naming:
+  - channel room: channel:<channelId>
+  - call room: call:<scope:id>
+
+Frontend call UI and signaling:
+- TopBar incoming/outgoing invite entry point:
+  - File: client/src/components/app/TopBar.jsx
+  - Starts call invite with call:invite and displays incoming call card + ringtone.
+- Socket hook abstraction:
+  - File: client/src/hooks/useSocket.js
+  - Exposes inviteCall, respondToCall, joinCall, leaveCall, sendCallSignal, endCall and listeners.
+- Active call modal:
+  - File: client/src/components/chat/VideoCallModal.jsx
+  - Creates RTCPeerConnection instances, exchanges offer/answer/ice over socket events.
+
+HTTP API and CORS:
+- File: server/src/app.js
+- Express CORS middleware validates origin against parsed allow-list and (in development) private-LAN origins.
+
+============================================================
+3) Detailed Backend Implementation (Current)
+============================================================
+3.1 Session model
+- Session object fields include:
+  - callId (UUID)
+  - roomId, channelId, scope
+  - initiatedByObjectId, initiatedByUserId, initiatedByName
+  - invitedUserIds, acceptedUserIds, declinedUserIds
+  - status: ringing | active | ended
+  - startedLogged
+  - startedAt
+  - ringingTimer
+
+3.2 Audience resolution
+- getCallAudienceUserIds(roomId, callerUserId):
+  - Validates room format via parseCallRoom.
+  - Validates channel access via canAccessChannel.
+  - For DM channels: uses dmParticipants.
+  - For non-DM channels:
+    - private channel: allowed users + workspace owner + workspace admins
+    - public channel: workspace owner + all workspace members
+  - Removes caller from invite recipient list.
+
+3.3 Invite flow (call:invite)
+- Validates roomId.
+- Resolves audience.
+- Creates or reuses call session.
+- Starts ringing timeout timer (CALL_RING_TIMEOUT_MS, default 45s).
+- Writes chat timeline message:
+  - [Call] <name> started a video call
+- Emits call:incoming to invited users in user-specific rooms.
+
+3.4 Accept/Decline flow (call:respond)
+- Requires roomId and callId.
+- Ensures user is invited and session active.
+- Accept path:
+  - adds user to acceptedUserIds
+  - sets status to active
+  - clears ringing timer
+  - emits call:accepted
+- Decline path:
+  - adds user to declinedUserIds
+  - emits call:declined
+  - if everyone declined and none accepted -> endCallSession(reason=declined)
+
+3.5 Join/Leave media room
+- call:join:
+  - validates session availability and authorization
+  - joins socket to call room
+  - returns existing participants for mesh setup
+  - emits call:user-joined
+- call:leave:
+  - removes participant from callParticipants
+  - emits call:user-left
+  - when room empty: finalizeCallSessionIfNeeded -> endCallSession
+
+3.6 Signaling relay
+- call:signal relays offer/answer/ice to target participant socket after validating both source and target are in same callParticipants map.
+
+3.7 End flow and timeline
+- call:end checks authorization, then endCallSession(reason=ended)
+- endCallSession emits call:ended and writes timeline message:
+  - [Call] Video call ended
+
+3.8 Disconnect safety
+- On socket disconnect:
+  - remove socket from all call rooms
+  - emit user-left where needed
+  - finalize/end session when last participant leaves
+
+============================================================
+4) Detailed Frontend Implementation (Current)
+============================================================
+4.1 Outgoing invite trigger
+- TopBar button -> handleInviteAndStart:
+  - resolves roomId (channel:<id> or dm:<id>)
+  - emits inviteCall(roomId, title)
+  - on success opens call UI (VideoCallModal)
+
+4.2 Incoming call UX
+- TopBar subscribes onCallIncoming.
+- On payload:
+  - stores incoming call object
+  - plays ringtone audio loop (best effort, browser policy may affect autoplay)
+- Accept action:
+  - respondToCall(roomId, callId, true)
+  - opens call via onAcceptIncomingCall callback
+- Decline action:
+  - respondToCall(roomId, callId, false)
+  - dismisses card and stops ringtone
+
+4.3 Media/session setup
+- VideoCallModal on open:
+  - calls getUserMedia({audio:true, video:true})
+  - emits joinCall(roomId)
+  - builds RTCPeerConnection per remote participant
+  - initiator creates offer; remote answers
+  - exchanges ICE candidates via call:signal
+
+4.4 In-call controls
+- Mic/camera toggle, raise hand, reactions, PiP, hangup.
+- Hangup path notifies backend via call:end and call:leave/teardown.
+
+============================================================
+5) CORS and LAN Implementation (Current)
+============================================================
+5.1 Express API CORS
+- server/src/app.js:
+  - parseAllowedOrigins() reads ALLOWED_ORIGINS (comma-separated) + localhost defaults.
+  - origin callback allows:
+    - no-origin requests
+    - explicit allow-list origins
+    - development private-network origins (10.x, 192.168.x.x, 172.16-31.x.x, localhost/127.0.0.1)
+
+5.2 Socket.IO CORS
+- server/src/sockets/index.js mirrors same policy:
+  - explicit allow-list + development private-LAN allowance.
+
+5.3 Server binding for LAN
+- server/src/index.js:
+  - HOST env support (default 0.0.0.0)
+  - allows server to listen on network interface instead of loopback only.
+
+5.4 Client env strategy
+- client/.env:
+  - VITE_API_URL and VITE_WS_URL set empty for same-origin + Vite proxy behavior in dev.
+  - avoids localhost hard-pin issue on mobile.
+
+5.5 Vite LAN support
+- client/vite.config.js:
+  - server.host enabled
+  - proxy target configurable via VITE_DEV_PROXY_TARGET (default localhost:5000)
+
+============================================================
+6) Why It Is Not Working (Root Cause Breakdown)
+============================================================
+6.1 Root cause A (confirmed): strict origin mismatch during phone login
+Symptom:
+- Error stack: Not allowed by CORS in server/src/app.js origin callback.
+
+Mechanism:
+- Phone browser sends Origin like http://192.168.x.x:5173.
+- Earlier strict allow-list only had localhost entries.
+- Request blocked before auth/login flow can complete.
+
+Status:
+- Addressed in code with development private-LAN origin acceptance and env allow-list parsing.
+
+6.2 Root cause B (previously confirmed blocker): frontend localhost pinning
+Symptom:
+- Multi-device cannot authenticate/socket-connect even when backend is up.
+
+Mechanism:
+- If VITE_API_URL or VITE_WS_URL is http://localhost:5000, phone resolves localhost to itself.
+- API and socket requests never reach PC backend.
+
+Status:
+- Addressed by clearing default values and using proxy/same-origin strategy.
+
+6.3 Root cause C (likely remaining runtime blocker in some environments): no TURN server
+Symptom:
+- Signaling succeeds (invite/accept/join events), but media may fail or stay black in restrictive NAT/cellular/public Wi-Fi.
+
+Mechanism:
+- RTCPeerConnection config uses STUN only:
+  - stun:stun.l.google.com:19302
+  - stun:stun1.l.google.com:19302
+- STUN-only cannot guarantee connectivity across all NAT/firewall topologies.
+- Production-grade video needs TURN relay fallback.
+
+Status:
+- Not implemented yet.
+
+6.4 Root cause D (operational): stale process after env/code changes
+Symptom:
+- Same CORS errors continue after edits.
+
+Mechanism:
+- Existing running process still holds old config.
+- Must restart backend and frontend dev servers after env and CORS updates.
+
+Status:
+- Operational, not code bug.
+
+============================================================
+7) Evidence Summary
+============================================================
+- Backend test runner passes after current changes.
+- CORS error stack showed origin callback rejection path in app.js.
+- Implementation now includes LAN-aware CORS in both Express and Socket.IO.
+- Remaining call reliability risk is infrastructure-level (TURN missing), not only business logic.
+
+============================================================
+8) What Is Implemented Correctly
+============================================================
+- Session-driven call lifecycle with explicit states.
+- Server-authoritative invite/respond/end flow.
+- Timeline messages for call started and call ended.
+- Incoming call UI and accept/decline semantics.
+- Signaling relay and participant room events.
+- Disconnect cleanup and session finalization.
+- LAN-focused CORS and host-binding improvements.
+
+============================================================
+9) What Is Still Missing for Production-Reliable Calls
+============================================================
+1. TURN server integration in RTC_CONFIG (credentialed relay).
+2. Better call diagnostics surfaced to UI (separate signaling-failed vs media-failed states).
+3. Optional call reconnect/retry strategy on transient network drops.
+4. Metrics/log correlation for callId across client and server for debugging.
+5. Stronger autoplay/ringtone fallback UX on mobile browser audio policies.
+
+============================================================
+10) Immediate Verification Checklist
+============================================================
+1. Restart both backend and frontend dev processes.
+2. Ensure server env includes HOST=0.0.0.0.
+3. Ensure phone opens app via http://<pc-lan-ip>:5173 (not localhost).
+4. Ensure VITE_API_URL and VITE_WS_URL are blank in client/.env for proxy mode.
+5. Confirm socket auth token retrieval and socket connect from phone.
+6. Start call and verify this sequence:
+   - call:invite emitted
+   - call:incoming received on callee
+   - callee responds (call:respond)
+   - both join call room
+   - offer/answer/ice exchanged
+7. If signaling works but media fails, treat as TURN-required network path.
+
+============================================================
+11) Conclusion
+============================================================
+The feature implementation is functionally complete for basic WebRTC signaling and call lifecycle management. The original phone-login failure was caused by CORS origin policy mismatch and localhost-oriented dev config, both now addressed in code.
+
+If calls still fail after restart and correct LAN URL usage, the most probable remaining technical reason is missing TURN relay support, which is required for production-grade reliability across varied NAT/firewall conditions.

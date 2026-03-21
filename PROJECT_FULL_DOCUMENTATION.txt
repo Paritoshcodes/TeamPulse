@@ -1,0 +1,1306 @@
+TeamPulse - Comprehensive Technical Documentation
+Generated: 2026-03-18
+Workspace Root: D:\TeamPulse
+
+================================================================================
+1) PROJECT IDENTITY AND CURRENT SCOPE
+================================================================================
+
+Project Name:
+- teampulse
+
+Current Working Monorepo Packages:
+- client (React + Vite frontend)
+- server (Express + Socket.IO + MongoDB backend)
+- shared (minimal placeholder package)
+
+Root package manager model:
+- npm workspaces
+
+Root scripts (from package.json):
+- dev: concurrently runs dev:server and dev:client
+- dev:client: npm run dev --workspace=client -- --host --port 5173
+- dev:server: npm run dev --workspace=server
+- build: npm run build --workspaces --if-present
+- start: npm run start --workspace=server
+- test: npm --workspace=server test
+- lint: npm run lint --workspaces --if-present
+
+Node engine requirement:
+- >=18.0.0
+
+Important runtime observation:
+- The app is currently run as two local processes:
+  - frontend in client folder
+  - backend in server folder
+
+================================================================================
+2) ROOT DIRECTORY STRUCTURE (CURRENT)
+================================================================================
+
+Top-level folders/files:
+- .github/
+- client/
+- node_modules/
+- server/
+- shared/
+- .gitignore
+- package-lock.json
+- package.json
+
+Agent configuration files present:
+- .github/agents/FRIDAY.agent.md
+- .github/agents/JARVIS.agent.md
+
+================================================================================
+3) COMPLETE FILE INVENTORY (NON-NODE_MODULES, NON-DIST)
+================================================================================
+
+Root:
+- .gitignore
+- package-lock.json
+- package.json
+
+.github:
+- .github/agents/FRIDAY.agent.md
+- .github/agents/JARVIS.agent.md
+
+client:
+- client/.env
+- client/index.html
+- client/package.json
+- client/postcss.config.js
+- client/tailwind.config.js
+- client/vite.config.js
+- client/public/favicon.svg
+- client/src/App.jsx
+- client/src/index.css
+- client/src/main.jsx
+- client/src/components/.gitkeep
+- client/src/components/ChannelMembersModal.jsx
+- client/src/components/ConfirmDialog.jsx
+- client/src/components/DirectMessages.jsx
+- client/src/components/InviteModal.jsx
+- client/src/components/NotificationDropdown.jsx
+- client/src/components/OnlineStatusIndicator.jsx
+- client/src/components/PendingInvitations.jsx
+- client/src/components/ProtectedRoute.jsx
+- client/src/components/SettingsModal.jsx
+- client/src/components/SmartSearchModal.jsx
+- client/src/components/UserProfileDropdown.jsx
+- client/src/components/WorkspaceSettingsModal.jsx
+- client/src/components/app/TopBar.jsx
+- client/src/components/chat/ChatWindow.jsx
+- client/src/components/chat/MessageInput.jsx
+- client/src/components/chat/MessageList.jsx
+- client/src/components/chat/MessageReactions.jsx
+- client/src/components/chat/ThreadSidebar.jsx
+- client/src/components/chat/TypingIndicator.jsx
+- client/src/components/dashboard/DashboardHome.jsx
+- client/src/components/layout/AppShell.jsx
+- client/src/components/layout/Sidebar.jsx
+- client/src/components/ui/Avatar.jsx
+- client/src/components/ui/Badge.jsx
+- client/src/components/ui/Button.jsx
+- client/src/components/ui/Card.jsx
+- client/src/components/ui/ContextMenu.jsx
+- client/src/components/ui/index.js
+- client/src/components/ui/Input.jsx
+- client/src/components/ui/Modal.jsx
+- client/src/components/ui/Spinner.jsx
+- client/src/components/ui/ToastProvider.jsx
+- client/src/components/ui/Toggle.jsx
+- client/src/context/.gitkeep
+- client/src/context/AuthContext.jsx
+- client/src/context/OnlineStatusContext.jsx
+- client/src/context/SocketContext.jsx
+- client/src/hooks/.gitkeep
+- client/src/hooks/useSocket.js
+- client/src/layouts/.gitkeep
+- client/src/pages/.gitkeep
+- client/src/pages/Dashboard.jsx
+- client/src/pages/Home.jsx
+- client/src/pages/UsernameSetup.jsx
+- client/src/pages/WorkspaceSelector.jsx
+- client/src/pages/Auth/Callback.jsx
+- client/src/pages/Auth/ForgotPassword.jsx
+- client/src/pages/Auth/Login.jsx
+- client/src/pages/Auth/Register.jsx
+- client/src/pages/Auth/ResetPassword.jsx
+- client/src/pages/Auth/VerifyEmail.jsx
+- client/src/services/.gitkeep
+- client/src/services/authService.js
+- client/src/services/connectionService.js
+- client/src/services/dashboardService.js
+- client/src/services/dmService.js
+- client/src/services/invitationService.js
+- client/src/services/managementService.js
+- client/src/services/messageService.js
+- client/src/services/notificationService.js
+- client/src/services/reminderService.js
+- client/src/services/searchService.js
+- client/src/services/userService.js
+- client/src/services/workspaceService.js
+- client/src/utils/.gitkeep
+- client/src/utils/groupMessages.js
+- client/src/utils/motionPresets.js
+
+server:
+- server/.env
+- server/jest.config.cjs
+- server/package.json
+- server/test-runner.js
+- server/src/app.js
+- server/src/index.js
+- server/src/config/db.js
+- server/src/config/passport.js
+- server/src/controllers/.gitkeep
+- server/src/controllers/auth.controller.js
+- server/src/controllers/channel.controller.js
+- server/src/controllers/invitationController.js
+- server/src/controllers/message.controller.js
+- server/src/controllers/reaction.controller.js
+- server/src/controllers/team.controller.js
+- server/src/controllers/workspace.controller.js
+- server/src/middleware/auth.middleware.js
+- server/src/middleware/emailVerified.middleware.js
+- server/src/middleware/errorHandler.js
+- server/src/middleware/rbac.middleware.js
+- server/src/middleware/workspace.middleware.js
+- server/src/models/.gitkeep
+- server/src/models/Channel.js
+- server/src/models/Connection.js
+- server/src/models/Invitation.js
+- server/src/models/Message.js
+- server/src/models/Notification.js
+- server/src/models/Reminder.js
+- server/src/models/ScheduledMessage.js
+- server/src/models/Team.js
+- server/src/models/User.js
+- server/src/models/Workspace.js
+- server/src/routes/.gitkeep
+- server/src/routes/auth.routes.js
+- server/src/routes/channel.management.routes.js
+- server/src/routes/channel.routes.js
+- server/src/routes/connection.routes.js
+- server/src/routes/dashboard.routes.js
+- server/src/routes/dm.routes.js
+- server/src/routes/invitationRoutes.js
+- server/src/routes/message.routes.js
+- server/src/routes/notification.routes.js
+- server/src/routes/reminder.routes.js
+- server/src/routes/search.routes.js
+- server/src/routes/team.management.routes.js
+- server/src/routes/team.routes.js
+- server/src/routes/user.routes.js
+- server/src/routes/username.routes.js
+- server/src/routes/workspace.management.routes.js
+- server/src/routes/workspace.routes.js
+- server/src/services/.gitkeep
+- server/src/services/channelAccess.js
+- server/src/services/emailService.js
+- server/src/services/rateLimiter.js
+- server/src/services/scheduler.service.js
+- server/src/socket/notificationHandlers.js
+- server/src/sockets/index.js
+- server/tests/invitations.test.js
+- server/tests/verification.test.js
+
+shared:
+- shared/package.json
+- shared/README.md
+
+================================================================================
+4) FRONTEND ARCHITECTURE (client)
+================================================================================
+
+4.1 Tech Stack
+- React 18.3.1
+- React Router DOM 6.28.0
+- Vite 5.x
+- Tailwind CSS 3.4.x
+- Framer Motion 12.x
+- Socket.IO client 4.7.5
+- react-hot-toast
+- Headless UI + lucide-react
+
+4.2 Frontend entrypoint and composition
+- main.jsx mounts App in React.StrictMode.
+- App.jsx wraps app with:
+  - AuthProvider
+  - BrowserRouter
+  - ToastProvider
+  - AnimatedRoutes with AnimatePresence route transitions
+
+4.3 Client route map
+Defined in client/src/App.jsx:
+- /login -> Login page
+- /register -> Register page
+- /forgot-password -> ForgotPassword page
+- /reset-password -> ResetPassword page
+- /auth/callback -> OAuth callback page
+- / -> ProtectedRoute -> Dashboard page
+- /verify-email -> ProtectedRoute -> VerifyEmail page
+- /workspaces -> ProtectedRoute -> WorkspaceSelector page
+- * -> redirect to /
+
+4.4 Access control model (frontend)
+- ProtectedRoute checks AuthContext
+  - if loading: shows loading UI
+  - if not authenticated: redirects to /login
+  - if authenticated: renders children
+
+4.5 Context layer
+- AuthContext
+  - owns user session state
+  - exposes login/register/logout/guest/google login/refreshUser
+  - calls /api/auth/me on startup
+  - applies user appearance settings to document root (theme + font scale)
+- SocketContext
+  - wraps useSocket hook and provides socket API across app
+- OnlineStatusContext
+  - tracks and surfaces online/presence status (used in dashboard ecosystem)
+
+4.6 Primary page architecture
+
+Dashboard page (client/src/pages/Dashboard.jsx):
+- Main orchestration page for collaboration UX
+- Provides:
+  - workspace/team/channel selection
+  - DM selection
+  - channel chat rendering
+  - dashboard home widgets when no chat selected
+  - smart search modal and filters
+  - notifications, profile dropdown, settings modal
+  - invitation modal and pending invitations panel
+  - role-based management context menu actions
+  - snooze + follow-up reminder controls
+- Layout:
+  - AppShell
+  - Sidebar
+  - TopBar
+  - content body with DashboardHome or ChatWindow
+
+WorkspaceSelector page:
+- reads user workspaces
+- allows new workspace creation
+- displays workspace cards
+
+Auth pages:
+- Login: email/password, Google login, guest login
+- Register: name/email/password/username with debounced username availability check
+- VerifyEmail: OTP verify + resend
+- ForgotPassword: request reset code
+- ResetPassword: submit email+otp+new password
+- Callback: refresh user after OAuth redirect
+
+UsernameSetup page:
+- forced modal-like flow for users without username
+- validates username format and availability
+- calls /api/username/set
+
+4.7 Layout and component architecture
+
+Layout components:
+- AppShell: fixed split view with sidebar and main region
+- Sidebar: workspace switcher, channels/DM panes, quick stats, availability controls, recent activity
+- TopBar: active conversation title and actions
+
+Chat components:
+- ChatWindow: complete chat orchestration
+  - initial history fetch via REST
+  - join/leave channel via socket
+  - handle new/update/delete/reaction/thread events
+  - message compose and typing events
+  - thread sidebar and conversation stats
+- MessageList / MessageInput / TypingIndicator / ThreadSidebar / MessageReactions
+
+Dashboard widgets:
+- DashboardHome
+  - activity timeline
+  - quick action cards
+  - team availability
+  - weekly message mini chart
+  - pinned conversations
+
+Utility/modals:
+- InviteModal
+- PendingInvitations
+- NotificationDropdown
+- SettingsModal
+- UserProfileDropdown
+- SmartSearchModal
+- WorkspaceSettingsModal
+- ChannelMembersModal
+- ConfirmDialog
+- DirectMessages
+
+4.8 UI system
+- Reusable UI components under client/src/components/ui:
+  - Avatar, Badge, Button, Card, ContextMenu, Input, Modal, Spinner, ToastProvider, Toggle
+
+4.9 Styling and design system implementation
+- Tailwind config maps semantic CSS variables:
+  - background, foreground, card, primary, secondary, muted, accent, destructive, border, input, ring
+- Theme variables in index.css for dark/light/system behavior
+- root [data-theme] switching is driven by AuthContext appearance settings
+- custom utility classes and component classes via @layer
+- animation presets include fade/slide/scale/bounce/shimmer
+- custom scrollbar, gradients, glass effects present
+
+4.10 Frontend service layer (client/src/services)
+
+authService.js:
+- register
+- login
+- guest
+- me
+- getSocketToken
+- logout
+- sendOtp
+- verifyEmail
+- requestPasswordReset
+- resetPassword
+- checkUsername
+- setUsername
+- getGoogleLoginUrl
+
+workspaceService.js:
+- createWorkspace
+- getMyWorkspaces
+- getWorkspaceById
+- getTeams
+- createTeam
+- getChannels
+- createChannel
+- addWorkspaceMember
+
+dashboardService.js:
+- getDashboardOverview
+- updateAvailabilityStatus
+- togglePinnedConversation
+
+dmService.js:
+- startDM
+- getDMs
+
+invitationService.js:
+- createInvitation
+- acceptInvitation
+- declineInvitation (uses DELETE invitation endpoint)
+- getPendingInvitations
+
+managementService.js:
+- renameWorkspace
+- deleteWorkspace
+- renameTeam
+- deleteTeam
+- renameChannel
+- deleteChannel
+- getChannelMembers
+- searchUsers
+- getWorkspaceSettings
+- updateWorkspaceSettings
+- updateWorkspaceMemberRole
+- removeWorkspaceMember
+- leaveWorkspace
+- transferWorkspaceOwner
+
+messageService.js:
+- getMessages
+- updateMessage
+- deleteMessage
+- reactToMessage
+- getThreadMessages
+- replyToMessage
+
+notificationService.js:
+- getNotifications
+- markNotificationRead
+- markAllNotificationsRead
+
+reminderService.js:
+- getReminders
+- createReminder
+- createFollowUpReminder
+- scheduleMessage
+- snoozeChannel
+- unsnoozeChannel
+- getChannelSnoozeState
+- cancelReminder
+
+searchService.js:
+- globalSearch
+
+userService.js:
+- updateSettings
+- updateProfile
+- changePassword
+
+4.11 Frontend API endpoint mapping (from service calls)
+- /api/auth/register
+- /api/auth/login
+- /api/auth/guest
+- /api/auth/me
+- /api/auth/socket-token
+- /api/auth/logout
+- /api/auth/send-otp
+- /api/auth/verify-email
+- /api/auth/request-password-reset
+- /api/auth/reset-password
+- /api/auth/google
+- /api/username/check/:username
+- /api/username/set
+
+- /api/workspaces
+- /api/workspaces/:id
+- /api/workspaces/:id/members
+- /api/workspaces/:id/rename
+- /api/workspaces/:id/settings
+- /api/workspaces/:id/members/:memberId/role
+- /api/workspaces/:id/members/:memberId
+- /api/workspaces/:id/leave
+- /api/workspaces/:id/transfer-owner
+
+- /api/teams
+- /api/teams?workspaceId=...
+- /api/teams/:id/rename
+- /api/teams/:id
+
+- /api/channels
+- /api/channels?teamId=...
+- /api/channels/:id/rename
+- /api/channels/:id
+- /api/channels/:id/members
+
+- /api/messages
+- /api/messages/thread/:id
+- /api/messages/:id/reply
+- /api/messages/:id/react
+- /api/messages/:id
+
+- /api/invitations
+- /api/invitations/:id/accept
+- /api/invitations/:id
+
+- /api/notifications
+- /api/notifications/:id/read
+- /api/notifications/read-all
+
+- /api/dm/start
+- /api/dm/list
+
+- /api/connections/request
+- /api/connections/accept/:userId
+- /api/connections/reject/:userId
+- /api/connections/cancel/:userId
+- /api/connections/status/:userId
+
+- /api/dashboard/overview
+- /api/dashboard/status
+- /api/dashboard/pins
+
+- /api/search
+
+- /api/reminders
+- /api/reminders/follow-up
+- /api/reminders/schedule-message
+- /api/reminders/snooze-channel
+- /api/reminders/snooze-channel/:channelId
+- /api/reminders/:id/cancel
+
+- /api/user/settings
+- /api/user/profile
+- /api/user/password
+- /api/user/search
+
+4.12 Frontend environment variables
+- VITE_API_URL
+- VITE_WS_URL
+
+4.13 Vite integration
+- server port 5173
+- proxy /api -> http://localhost:5000
+- proxy /socket.io -> http://localhost:5000 with ws:true
+
+================================================================================
+5) BACKEND ARCHITECTURE (server)
+================================================================================
+
+5.1 Tech Stack
+- Express 4.x
+- Mongoose 8.x
+- Socket.IO 4.7.5
+- Passport Google OAuth
+- JWT auth
+- cookie-parser
+- express-rate-limit
+- Nodemailer
+- optional Redis + Bull queueing
+- ioredis
+
+5.2 Server startup sequence
+From server/src/index.js:
+1. load dotenv via import 'dotenv/config'
+2. connectDB()
+3. create HTTP server from Express app
+4. init Socket.IO server on same HTTP server
+5. startSchedulers() (reminders + scheduled messages)
+6. listen on PORT (default 5000)
+7. graceful shutdown on SIGTERM/SIGINT
+
+5.3 Express app composition and middleware order
+From server/src/app.js:
+1. app.set('trust proxy', 1)
+2. global rate limiter (1000 req / 15 minutes)
+3. CORS dynamic origin allowlist:
+   - process.env.CLIENT_URL
+   - http://localhost:5173
+   - http://localhost:5174
+4. express.json + express.urlencoded (10mb limits)
+5. cookieParser
+6. passport.initialize()
+7. health routes:
+   - GET /health
+   - GET /api/health (with db status)
+8. API route mounts (see next section)
+9. notFound middleware
+10. errorHandler middleware
+
+5.4 Mounted API route bases
+- /api/auth -> auth.routes.js
+- /api/workspaces -> workspace.routes.js
+- /api/workspaces -> workspace.management.routes.js
+- /api/teams -> team.routes.js
+- /api/teams -> team.management.routes.js
+- /api/channels -> channel.routes.js
+- /api/channels -> channel.management.routes.js
+- /api/messages -> message.routes.js
+- /api/invitations -> invitationRoutes.js
+- /api/notifications -> notification.routes.js
+- /api/user -> user.routes.js
+- /api/username -> username.routes.js
+- /api/dm -> dm.routes.js
+- /api/connections -> connection.routes.js
+- /api/dashboard -> dashboard.routes.js
+- /api/search -> search.routes.js
+- /api/reminders -> reminder.routes.js
+
+================================================================================
+6) COMPLETE BACKEND API ENDPOINT LIST (METHOD + FULL PATH)
+================================================================================
+
+6.1 Health
+- GET /health
+- GET /api/health
+
+6.2 Auth (/api/auth)
+- POST /api/auth/register
+- POST /api/auth/login
+- POST /api/auth/guest
+- GET /api/auth/me
+- GET /api/auth/socket-token
+- POST /api/auth/logout
+- POST /api/auth/send-otp
+- POST /api/auth/verify-email
+- POST /api/auth/request-password-reset
+- POST /api/auth/reset-password
+- GET /api/auth/google
+- GET /api/auth/google/callback
+
+6.3 Workspaces (/api/workspaces)
+- POST /api/workspaces
+- GET /api/workspaces
+- GET /api/workspaces/:id
+- POST /api/workspaces/:id/members
+
+6.4 Workspace management (/api/workspaces)
+- GET /api/workspaces/:id/settings
+- PATCH /api/workspaces/:id/settings
+- PATCH /api/workspaces/:id/members/:memberId/role
+- DELETE /api/workspaces/:id/members/:memberId
+- DELETE /api/workspaces/:id/leave
+- PATCH /api/workspaces/:id/transfer-owner
+- PATCH /api/workspaces/:id/rename
+- DELETE /api/workspaces/:id
+
+6.5 Teams (/api/teams)
+- POST /api/teams
+- GET /api/teams
+
+6.6 Team management (/api/teams)
+- PATCH /api/teams/:id/rename
+- DELETE /api/teams/:id
+
+6.7 Channels (/api/channels)
+- POST /api/channels
+- GET /api/channels
+
+6.8 Channel management (/api/channels)
+- PATCH /api/channels/:id/rename
+- DELETE /api/channels/:id
+- GET /api/channels/:id/members
+
+6.9 Messages (/api/messages)
+- GET /api/messages
+- GET /api/messages/thread/:id
+- POST /api/messages/:id/reply
+- POST /api/messages/:id/react
+- PATCH /api/messages/:id
+- DELETE /api/messages/:id
+
+6.10 Invitations (/api/invitations)
+- GET /api/invitations
+- POST /api/invitations
+- POST /api/invitations/:id/accept
+- DELETE /api/invitations/:id
+
+6.11 Notifications (/api/notifications)
+- GET /api/notifications
+- PATCH /api/notifications/:id/read
+- PATCH /api/notifications/read-all
+
+6.12 DMs (/api/dm)
+- POST /api/dm/start
+- GET /api/dm/list
+
+6.13 Connections (/api/connections)
+- POST /api/connections/request
+- POST /api/connections/accept/:userId
+- POST /api/connections/reject/:userId
+- POST /api/connections/cancel/:userId
+- GET /api/connections/status/:userId
+
+6.14 Dashboard (/api/dashboard)
+- GET /api/dashboard/overview
+- PATCH /api/dashboard/status
+- POST /api/dashboard/pins
+
+6.15 Search (/api/search)
+- GET /api/search
+
+6.16 Reminders (/api/reminders)
+- GET /api/reminders
+- POST /api/reminders
+- POST /api/reminders/follow-up
+- POST /api/reminders/schedule-message
+- POST /api/reminders/snooze-channel
+- GET /api/reminders/snooze-channel/:channelId
+- DELETE /api/reminders/snooze-channel/:channelId
+- PATCH /api/reminders/:id/cancel
+
+6.17 User (/api/user)
+- PATCH /api/user/settings
+- PATCH /api/user/profile
+- PATCH /api/user/password
+- GET /api/user/search
+
+6.18 Username (/api/username)
+- GET /api/username/check/:username
+- POST /api/username/set
+
+================================================================================
+7) BACKEND CONTROLLERS AND RESPONSIBILITIES
+================================================================================
+
+auth.controller.js
+- register: local signup, cookie auth, OTP setup/send
+- sendOtp: resend verification OTP (rate-limited)
+- verifyEmail: OTP verification
+- requestPasswordReset: create reset OTP and send mail
+- resetPassword: validate OTP and reset password
+- login: local auth
+- guest: guest account login path
+- me: current user profile payload
+- logout: clear auth cookie
+- socketToken: issue token for socket auth
+- googleCallback: finish OAuth flow
+
+workspace.controller.js
+- createWorkspace
+- getMyWorkspaces
+- getWorkspaceById
+- addMember
+
+team.controller.js
+- createTeam
+- getTeamsByWorkspace
+
+channel.controller.js
+- createChannel
+- getChannelsByTeam
+
+message.controller.js
+- getMessages
+- getThreadMessages
+- replyToMessage
+- updateMessage
+- deleteMessage
+
+reaction.controller.js
+- reactToMessage
+
+invitationController.js
+- getMyInvitations
+- createInvitation
+- acceptInvitation
+- expireInvitation
+
+================================================================================
+8) AUTHORIZATION / MIDDLEWARE ARCHITECTURE
+================================================================================
+
+auth.middleware.js
+- signToken(userId)
+- setAuthCookie(res, token)
+- clearAuthCookie(res)
+- getTokenFromRequest(req): cookie token or bearer token
+- requireAuth
+- optionalAuth
+- requireRole(...roles)
+
+emailVerified.middleware.js
+- requireEmailVerified
+
+workspace.middleware.js
+- requireWorkspaceMember
+  - owner/member check
+  - fallback checks for team membership or channel allowedUsers within workspace
+- requireWorkspaceAdmin
+
+rbac.middleware.js
+- requireWorkspaceOwner
+- requireWorkspaceAdmin
+- requireTeamAdmin
+- requireChannelAdmin
+
+errorHandler.js
+- notFound
+- errorHandler
+
+================================================================================
+9) SOCKET.IO ARCHITECTURE
+================================================================================
+
+Server file:
+- server/src/sockets/index.js
+
+Socket auth:
+- handshake expects token in auth.token or query.token
+- token verified with JWT secret
+- socket.data.user and socket.data.userId set
+
+Online presence:
+- onlineUsers map (userId -> socket ids)
+- emits user:online and user:offline
+- emits users:online snapshot on connect
+
+Rooms:
+- user:{userId} for personal notifications
+- channel:{channelId} for channel messages
+
+Inbound events:
+- join-channel(channelId, callback)
+- leave-channel(channelId)
+- send-message({channelId, content}, callback)
+- user:typing(channelId)
+- user:stopTyping(channelId)
+
+Outbound events:
+- users:online
+- user:online
+- user:offline
+- message:history
+- message:new
+- user:typing
+- user:stopTyping
+- new_notification
+
+Important behaviors:
+- canAccessChannel guard on join/send
+- message send requires email verified
+- mention detection using @username pattern
+- mention notifications emitted to user rooms
+- DM channels also emit message:new to user:{participantId}
+
+Companion helper:
+- server/src/socket/notificationHandlers.js provides sendNotification(io, data)
+
+================================================================================
+10) SCHEDULERS, BACKGROUND PROCESSING, AND EMAIL
+================================================================================
+
+scheduler.service.js
+- startSchedulers
+  - reminder processor interval: 15s
+  - scheduled message processor interval: 10s
+- stopSchedulers
+
+Due reminder processing:
+- queries Reminder pending items with remindAt <= now
+- creates Notification(type=reminder)
+- emits new_notification to user room
+- marks reminders sent
+
+Scheduled message processing:
+- queries ScheduledMessage pending items with sendAt <= now
+- creates Message
+- emits message:new to channel room
+- if DM channel, emits message:new to each participant room
+- marks scheduled messages sent
+
+emailService.js
+- SMTP transport if SMTP_HOST + SMTP_USER present
+- fallback Ethereal transport for dev/test
+- queue model:
+  - if REDIS_URL: Bull queue
+  - else in-memory immediate queue with retry backoff
+- exposes:
+  - enqueueMail
+  - sendOtpEmail
+  - sendPasswordResetEmail
+  - onMailSent(test hook)
+
+rateLimiter.js
+- OTP and reset mail rate limiting
+- Redis-backed if REDIS_URL, otherwise in-memory map
+- exports:
+  - canSendOtp
+  - canSendPasswordReset
+  - resetForTests
+
+================================================================================
+11) DATABASE MODEL ARCHITECTURE (MONGOOSE)
+================================================================================
+
+11.1 User
+Model file: server/src/models/User.js
+Key fields:
+- name (required)
+- email (unique sparse, required for local/google)
+- password (select:false, required for local)
+- avatar
+- username (unique sparse, lowercase pattern validated)
+- usernameSetAt
+- role: admin|member|guest
+- authProvider: local|google|guest
+- emailVerification: otp, expiresAt, verified
+- settings.notifications: email/desktop/sound/mentions
+- settings.appearance: theme, fontScale
+- settings.presence: status + updatedAt
+- settings.pinnedConversations[]
+- settings.snoozedChannels[]
+- resetPassword: otp, expiresAt
+Methods/hooks:
+- pre-save password hash with bcrypt salt rounds 12
+- comparePassword()
+Indexes:
+- text index on name + username
+
+11.2 Workspace
+Model file: server/src/models/Workspace.js
+Key fields:
+- name
+- description
+- avatar
+- slug (unique)
+- owner (User ref)
+- members[]: user, role, source(workspace|team|channel)
+- settings: allowMemberInvites, defaultMemberRole
+Indexes:
+- owner
+- members.user
+
+11.3 Team
+Model file: server/src/models/Team.js
+Key fields:
+- name
+- workspace ref
+- createdBy ref
+- members[]
+Indexes:
+- workspace
+- members.user
+
+11.4 Channel
+Model file: server/src/models/Channel.js
+Key fields:
+- name
+- type: text|voice|video
+- isPrivate
+- team ref (required unless isDM)
+- createdBy
+- allowedUsers[]
+- isDM
+- dmParticipants[]
+- archived, archivedAt
+Indexes:
+- team
+- allowedUsers
+- text index on name
+
+11.5 Message
+Model file: server/src/models/Message.js
+Key fields:
+- content
+- channel ref
+- sender ref
+- attachments[]
+- readBy[]
+- reactions[]
+- parentMessageId
+- threadId
+- replyCount
+- editedAt
+Indexes:
+- channel + createdAt desc
+- text index on content
+
+11.6 Invitation
+Model file: server/src/models/Invitation.js
+Key fields:
+- inviterId
+- inviteeEmail
+- scope: workspace|team|channel
+- workspace/team/channel refs
+- role: admin|member|guest
+- status: pending|accepted|declined
+Index:
+- TTL on createdAt (7 days)
+
+11.7 Notification
+Model file: server/src/models/Notification.js
+Key fields:
+- recipient
+- type: mention|reply|invitation|channel_add|message|connection_request|reminder
+- title
+- message
+- read
+- actionUrl
+- relatedMessage, relatedChannel, relatedWorkspace
+- sender
+Index:
+- recipient + read + createdAt desc
+
+11.8 Connection
+Model file: server/src/models/Connection.js
+Key fields:
+- sender
+- receiver
+- status: pending|accepted|rejected
+- connectedAt
+Indexes:
+- sender+receiver
+- receiver+sender
+
+11.9 Reminder
+Model file: server/src/models/Reminder.js
+Key fields:
+- userId
+- messageId
+- channelId
+- title
+- note
+- remindAt
+- status: pending|sent|cancelled
+- kind: message|followup
+Indexes:
+- userId + status + remindAt
+
+11.10 ScheduledMessage
+Model file: server/src/models/ScheduledMessage.js
+Key fields:
+- userId
+- channelId
+- content
+- sendAt
+- status: pending|sent|cancelled
+Indexes:
+- status + sendAt
+
+================================================================================
+12) CORE APPLICATION FLOWS
+================================================================================
+
+12.1 Authentication flow
+- Register/login/guest through /api/auth
+- httpOnly token cookie used for session
+- /api/auth/me used by frontend bootstrapping in AuthContext
+- optional Google OAuth via /api/auth/google + callback
+
+12.2 Email verification flow
+- user requests OTP via /api/auth/send-otp
+- verifies via /api/auth/verify-email
+- some write actions require verified email (middleware enforced)
+
+12.3 Password reset flow
+- request OTP via /api/auth/request-password-reset
+- submit reset via /api/auth/reset-password
+
+12.4 Workspace-team-channel hierarchy flow
+- workspace created first
+- team belongs to workspace
+- channel belongs to team (except DM)
+- access checks done by workspace/rbac/channelAccess rules
+
+12.5 Invitations flow
+- invitation scope controls downstream access model:
+  - workspace scope
+  - team scope
+  - channel scope
+- acceptance endpoint updates membership visibility domain
+- invitation TTL auto-expiry after 7 days
+
+12.6 Messaging and threads flow
+- initial history via REST + socket join callbacks
+- real-time send via socket send-message
+- replies represented by parentMessageId/threadId
+- reactions, updates, deletes via REST + socket propagation
+
+12.7 DM flow
+- /api/dm/start checks accepted connection requirement
+- reuses existing DM channel or creates one
+- DM channels marked isDM=true and use dmParticipants
+
+12.8 Search flow
+- /api/search performs scoped message/user/channel/file lookup
+- scope constrained by workspace access and canAccessChannel
+
+12.9 Notification flow
+- notifications persisted in Notification model
+- read APIs for single/all
+- socket new_notification event for real-time UX
+
+12.10 Reminder + scheduled messaging flow
+- reminders and scheduled messages created through /api/reminders
+- scheduler interval jobs emit notifications and messages when due
+
+================================================================================
+13) CONFIGURATION AND ENVIRONMENT VARIABLES
+================================================================================
+
+13.1 Server env vars referenced in code
+- CLIENT_URL
+- FROM_EMAIL
+- GOOGLE_CALLBACK_URL
+- GOOGLE_CLIENT_ID
+- GOOGLE_CLIENT_SECRET
+- JWT_EXPIRES_IN
+- JWT_SECRET
+- MONGODB_URI
+- NODE_ENV
+- OTP_EXPIRY_MINUTES
+- OTP_SEND_COOLDOWN_MS
+- OTP_SEND_MAX_PER_HOUR
+- REDIS_URL
+- RESET_OTP_EXPIRY_MINUTES
+- RESET_SEND_COOLDOWN_MS
+- RESET_SEND_MAX_PER_HOUR
+- SMTP_HOST
+- SMTP_PASS
+- SMTP_PORT
+- SMTP_SECURE
+- SMTP_USER
+
+13.2 Client env vars referenced in code
+- VITE_API_URL
+- VITE_WS_URL
+
+13.3 Important defaults and behavior
+- PORT default: 5000
+- MONGODB_URI default: mongodb://localhost:27017/teampulse
+- JWT_SECRET has dev fallback (should be overridden in production)
+- if SMTP not configured, Ethereal fallback used
+- if REDIS_URL not configured, in-memory fallbacks are used
+
+================================================================================
+14) TESTING ARCHITECTURE
+================================================================================
+
+14.1 Server tests
+- Framework: Jest
+- Config file: server/jest.config.cjs
+- Runner: server/test-runner.js
+  - sets NODE_ENV=test
+  - runs jest with --experimental-vm-modules
+
+14.2 Existing test suites
+- server/tests/invitations.test.js
+  - uses mongodb-memory-server
+  - validates invitation scope permissions and access boundaries
+- server/tests/verification.test.js
+  - validates OTP send/verify/reset patterns and send rate limits
+
+14.3 Test technical pattern
+- dynamic imports for ESM compatibility
+- in-memory MongoDB for isolated test DB
+- direct endpoint tests via supertest
+
+================================================================================
+15) BUILD, RUN, AND DEV COMMANDS
+================================================================================
+
+Root:
+- npm run dev
+- npm run dev:client
+- npm run dev:server
+- npm run build
+- npm run test
+- npm run lint
+
+Client workspace:
+- npm run dev
+- npm run dev:client
+- npm run build
+- npm run preview
+- npm run lint
+
+Server workspace:
+- npm run dev
+- npm run dev:server
+- npm run start
+- npm run test
+- npm run lint
+
+================================================================================
+16) KNOWN STRUCTURAL AND OPERATIONAL NOTES
+================================================================================
+
+- shared package exists but currently minimal (metadata only + README note).
+- there are .gitkeep placeholders in several source subfolders.
+- route organization uses split files:
+  - base domain routes and management routes mounted to same base path.
+- CORS allowlist includes localhost:5173 and localhost:5174 plus CLIENT_URL.
+- Vite proxy forwards /api and /socket.io to backend.
+- DM route source code comments indicate historical schema concern about team requirement,
+  but current Channel schema already makes team optional when isDM is true.
+- Some real-time event names differ by domain:
+  - new_notification event for notifications
+  - message:* and user:* event namespaces for messaging/presence
+
+================================================================================
+17) SECURITY AND RELIABILITY NOTES (IMPLEMENTATION-AWARE)
+================================================================================
+
+Security-relevant mechanisms present:
+- JWT-based auth with httpOnly cookie transport
+- optional bearer support for API clients
+- role and membership checks for workspace/team/channel management
+- email verification gate for selected actions
+- global rate limiting and OTP-specific rate limiting
+
+Potential hardening points:
+- enforce required JWT_SECRET in production startup (fail fast if missing)
+- review default sameSite/cross-site cookie behavior in production deployment topology
+- replace in-memory limiter/queue with Redis in production environments
+- ensure secrets are never committed in .env files
+
+================================================================================
+18) FRONTEND-TO-BACKEND FEATURE MATRIX
+================================================================================
+
+Auth and identity:
+- login/register/guest/google
+- username check/set flow
+- verify email and password reset
+
+Collaboration structure:
+- workspace management
+- team management
+- channel management
+- role/membership updates
+
+Messaging:
+- channel and DM messaging
+- typing indicators
+- reactions
+- edit/delete
+- threads
+
+Social graph:
+- connection requests (request/accept/reject/cancel/status)
+- DM access gated by accepted connection
+
+Productivity features:
+- reminders
+- follow-up reminders
+- scheduled messages
+- channel notification snoozing
+- dashboard overview and analytics-like widgets
+- pinned conversations
+
+Search and discovery:
+- global search over messages, users, channels, files metadata
+
+Notifications:
+- persistent notifications + real-time delivery
+- unread count and read state APIs
+
+================================================================================
+19) QUICK REFERENCE: CRITICAL FILES BY LAYER
+================================================================================
+
+Frontend core:
+- client/src/App.jsx
+- client/src/pages/Dashboard.jsx
+- client/src/context/AuthContext.jsx
+- client/src/hooks/useSocket.js
+- client/src/components/layout/AppShell.jsx
+- client/src/components/layout/Sidebar.jsx
+- client/src/components/chat/ChatWindow.jsx
+
+Frontend config/styling:
+- client/vite.config.js
+- client/tailwind.config.js
+- client/postcss.config.js
+- client/src/index.css
+
+Backend core:
+- server/src/index.js
+- server/src/app.js
+- server/src/sockets/index.js
+- server/src/config/db.js
+- server/src/config/passport.js
+
+Backend security:
+- server/src/middleware/auth.middleware.js
+- server/src/middleware/emailVerified.middleware.js
+- server/src/middleware/workspace.middleware.js
+- server/src/middleware/rbac.middleware.js
+
+Backend routing:
+- server/src/routes/*.js (all route definitions)
+
+Backend domain logic:
+- server/src/controllers/*.js
+- server/src/services/*.js
+
+Data layer:
+- server/src/models/*.js
+
+Tests:
+- server/tests/invitations.test.js
+- server/tests/verification.test.js
+- server/jest.config.cjs
+- server/test-runner.js
+
+================================================================================
+20) SHARED PACKAGE STATUS
+================================================================================
+
+shared/package.json:
+- name: shared
+- version: 1.0.0
+- private: true
+- main: index.js
+- types: index.d.ts
+
+shared/README.md indicates intended purpose:
+- shared types, constants, and utilities between client and server.
+
+Current practical state:
+- no implemented shared source modules were found in this workspace snapshot.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
