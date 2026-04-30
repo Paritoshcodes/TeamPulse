@@ -125,8 +125,6 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
-
 app.use('/api/upload', uploadRoutes);
 app.post('/api/send-otp', requireAuth, sendOtp);
 app.use('/api/auth', authRoutes);
