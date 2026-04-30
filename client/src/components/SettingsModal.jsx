@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Bell, User, Monitor, Lock, Shield, Moon, Sun, MonitorSmartphone } from 'lucide-react';
+import { X, Bell, User, Monitor, Lock, Shield, Moon, Sun, MonitorSmartphone, Camera, Trash2 } from 'lucide-react';
 import { Button, Input, Avatar, Toggle } from './ui';
 import { useAuth } from '../context/AuthContext';
 import * as userService from '../services/userService';
-import * as authService from '../services/authService';
+import * as uploadService from '../services/uploadService';
+import AvatarCropModal from './AvatarCropModal';
+import VerifyEmailDialog from './VerifyEmailDialog.jsx';
 import toast from 'react-hot-toast';
 
 const TABS = [
@@ -14,10 +16,19 @@ const TABS = [
     { id: 'privacy', label: 'Privacy', icon: Lock },
 ];
 
+// DB stores 'blue' as the default theme, with legacy 'light' mapped to 'blue'
+const THEME_TO_DB = { blue: 'blue', dark: 'dark', system: 'system' };
+const DB_TO_THEME = { light: 'blue', blue: 'blue', dark: 'dark', system: 'system' };
+
 export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' }) {
     const { user, refreshUser } = useAuth();
     const [activeTab, setActiveTab] = useState(initialTab);
     const [loading, setLoading] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [cropImageSrc, setCropImageSrc] = useState(null);
+    const [showCropModal, setShowCropModal] = useState(false);
+    const [showVerifyModal, setShowVerifyModal] = useState(false);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (isOpen && initialTab) {
@@ -25,6 +36,9 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
         }
         if (!isOpen) {
             setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            setCropImageSrc(null);
+            setShowCropModal(false);
+            setShowVerifyModal(false);
         }
     }, [isOpen, initialTab]);
 
@@ -36,7 +50,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
             mentions: true
         },
         appearance: {
-            theme: 'dark',
+            theme: 'blue',
             fontScale: 100
         }
     });
@@ -59,6 +73,11 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
         return allowed.includes(numeric) ? numeric : 100;
     };
 
+    const normalizeTheme = (value) => {
+        const raw = String(value || '').toLowerCase();
+        return DB_TO_THEME[raw] || 'blue';
+    };
+
     useEffect(() => {
         if (user?.settings) {
             setFormData(prev => ({
@@ -66,6 +85,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                 appearance: {
                     ...prev.appearance,
                     ...user.settings.appearance,
+                    theme: normalizeTheme(user.settings.appearance?.theme),
                     fontScale: normalizeFontScale(user.settings.appearance?.fontScale)
                 }
             }));
@@ -112,7 +132,15 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
     const handleSave = async () => {
         setLoading(true);
         try {
-            await userService.updateSettings(formData);
+            // Map frontend theme name back to DB enum value before saving
+            const settingsToSave = {
+                ...formData,
+                appearance: {
+                    ...formData.appearance,
+                    theme: THEME_TO_DB[formData.appearance.theme] || 'blue',
+                },
+            };
+            await userService.updateSettings(settingsToSave);
             await userService.updateProfile({
                 name: profileData.name,
                 avatar: profileData.avatar
@@ -148,16 +176,54 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
         }
     };
 
-    const handleResendVerification = async () => {
+
+    // Step 1: User picks a file → open crop modal with preview
+    const handleFileSelect = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error('File size must be less than 10 MB');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setCropImageSrc(reader.result);
+            setShowCropModal(true);
+        };
+        reader.readAsDataURL(file);
+
+        // Reset so same file can be picked again
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    // Step 2: After crop → upload the cropped file to the server
+    const handleCroppedFile = async (croppedFile) => {
+        setUploading(true);
         try {
-            await authService.sendOtp();
-            toast.success('Verification code sent');
+            const response = await uploadService.uploadFile(croppedFile);
+            setProfileData(prev => ({ ...prev, avatar: response.url }));
+            toast.success('Avatar updated');
+            setShowCropModal(false);
+            setCropImageSrc(null);
         } catch (err) {
-            toast.error(err.message || 'Failed to send code');
+            toast.error(err.message || 'Failed to upload avatar');
+        } finally {
+            setUploading(false);
         }
     };
 
+    const handleRemoveAvatar = () => {
+        setProfileData(prev => ({ ...prev, avatar: '' }));
+    };
+
     return (
+        <>
         <AnimatePresence>
             {isOpen && (
                 <>
@@ -223,15 +289,51 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                                     >
                                         {activeTab === 'profile' && (
                                             <div className="space-y-8 max-w-md">
+                                                {/* Avatar section */}
                                                 <div className="flex items-center gap-6">
-                                                    <Avatar
-                                                        name={profileData.name || user.name}
-                                                        src={profileData.avatar || user.avatar}
-                                                        size="xl"
-                                                        className="h-24 w-24 shadow-xl shadow-black/40"
-                                                    />
-                                                    <div className="space-y-2">
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Paste an image URL to update your avatar.</p>
+                                                    <div className="group relative">
+                                                        <Avatar
+                                                            name={profileData.name || user.name}
+                                                            src={profileData.avatar || user.avatar}
+                                                            size="xl"
+                                                            className="h-24 w-24 shadow-xl shadow-black/40"
+                                                        />
+                                                        {/* Camera overlay on hover */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                                                        >
+                                                            <Camera size={22} className="text-white" />
+                                                        </button>
+                                                        <input
+                                                            ref={fileInputRef}
+                                                            type="file"
+                                                            accept="image/png,image/jpeg,image/gif,image/webp"
+                                                            onChange={handleFileSelect}
+                                                            className="hidden"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-2 flex-1">
+                                                        <button
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                            className="flex items-center gap-2 rounded-lg bg-primary/20 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/30"
+                                                        >
+                                                            <Camera size={14} />
+                                                            Upload Picture
+                                                        </button>
+                                                        {(profileData.avatar || user.avatar) && (
+                                                            <button
+                                                                onClick={handleRemoveAvatar}
+                                                                className="flex items-center gap-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/20"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                                Remove
+                                                            </button>
+                                                        )}
+                                                        <p className="text-[10px] font-medium text-muted-foreground">
+                                                            JPG, PNG, GIF or WebP. Max 10 MB.
+                                                        </p>
                                                     </div>
                                                 </div>
                                                 <div className="space-y-4">
@@ -239,12 +341,6 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                                                         label="Display Name"
                                                         value={profileData.name}
                                                         onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                                                    />
-                                                    <Input
-                                                        label="Avatar URL"
-                                                        value={profileData.avatar}
-                                                        onChange={(e) => setProfileData(prev => ({ ...prev, avatar: e.target.value }))}
-                                                        placeholder="https://..."
                                                     />
                                                     <Input label="Email Address" defaultValue={user.email} disabled />
                                                     <Input label="Username" defaultValue={`@${user.username || 'unset'}`} disabled />
@@ -280,7 +376,7 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                                             <div className="space-y-8">
                                                 <div className="grid grid-cols-3 gap-4">
                                                     {[
-                                                        { id: 'light', label: 'Light', icon: Sun },
+                                                        { id: 'blue', label: 'Blue', icon: Sun },
                                                         { id: 'dark', label: 'Dark', icon: Moon },
                                                         { id: 'system', label: 'System', icon: MonitorSmartphone },
                                                     ].map(theme => (
@@ -340,8 +436,8 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                                                             </p>
                                                         </div>
                                                         {!user?.isEmailVerified && (
-                                                            <Button size="sm" variant="secondary" onClick={handleResendVerification}>
-                                                                Send Code
+                                                            <Button size="sm" variant="secondary" onClick={() => setShowVerifyModal(true)}>
+                                                                Verify Email
                                                             </Button>
                                                         )}
                                                     </div>
@@ -406,5 +502,25 @@ export default function SettingsModal({ isOpen, onClose, initialTab = 'profile' 
                 </>
             )}
         </AnimatePresence>
+
+        {/* Avatar crop modal - rendered outside the AnimatePresence so it overlays properly */}
+        <AvatarCropModal
+            isOpen={showCropModal}
+            onClose={() => {
+                setShowCropModal(false);
+                setCropImageSrc(null);
+            }}
+            imageSrc={cropImageSrc}
+            onCropComplete={handleCroppedFile}
+            uploading={uploading}
+        />
+
+        <VerifyEmailDialog
+            isOpen={showVerifyModal}
+            onClose={() => setShowVerifyModal(false)}
+            onVerified={refreshUser}
+            message="Enter the verification code we sent to your email."
+        />
+        </>
     );
 }

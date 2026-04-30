@@ -49,23 +49,6 @@ export async function register(req, res, next) {
       authProvider: 'local',
       role: 'member',
     });
-    // generate OTP and send email (rate-limited)
-    try {
-      const check = await canSendOtp(user._id.toString());
-      if (!check.ok) {
-        // do not block registration on rate-limit; log and continue
-        console.warn('OTP send rate-limited during register for user', user._id.toString(), check);
-      } else {
-        const otp = generateOtp();
-        const hashed = await bcrypt.hash(otp, 12);
-        user.emailVerification = { otp: hashed, expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60000), verified: false };
-        await user.save();
-        // enqueue email send (non-blocking to request flow)
-        emailService.sendOtpEmail(user.email, otp).catch((e) => console.error('Send OTP enqueue failed:', e));
-      }
-    } catch (mailErr) {
-      console.error('Failed to send OTP email:', mailErr.message || mailErr);
-    }
     const token = signToken(user._id);
     sendUser(res, user, token);
   } catch (err) {

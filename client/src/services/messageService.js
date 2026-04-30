@@ -1,7 +1,7 @@
 /**
  * Message API – history (REST). Real-time via useSocket.
  */
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_PUBLIC_API_URL || '';
 
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${API_URL}${path}`;

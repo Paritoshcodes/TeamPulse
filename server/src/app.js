@@ -9,6 +9,8 @@ import passport from 'passport';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/auth.middleware.js';
+import { sendOtp } from './controllers/auth.controller.js';
 import { isConnected } from './config/db.js';
 import './config/passport.js';
 import authRoutes from './routes/auth.routes.js';
@@ -126,6 +128,7 @@ app.get('/api/health', (req, res) => {
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 app.use('/api/upload', uploadRoutes);
+app.post('/api/send-otp', requireAuth, sendOtp);
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/workspaces', workspaceManagementRoutes);

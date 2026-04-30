@@ -70,7 +70,7 @@ const userSchema = new mongoose.Schema(
         mentions: { type: Boolean, default: true }
       },
       appearance: {
-        theme: { type: String, enum: ['light', 'dark', 'system'], default: 'dark' },
+        theme: { type: String, enum: ['blue', 'light', 'dark', 'system'], default: 'blue' },
         fontScale: { type: Number, default: 100 } // percentage
       },
       presence: {

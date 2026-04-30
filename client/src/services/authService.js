@@ -1,7 +1,7 @@
 /**
  * Auth API – register, login, guest, me, logout. All requests use credentials for httpOnly cookie.
  */
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_PUBLIC_API_URL || '';
 
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${API_URL}${path}`;
@@ -57,7 +57,7 @@ export async function logout() {
 }
 
 export async function sendOtp() {
-  return request('/api/auth/send-otp', { method: 'POST' });
+  return request('/api/send-otp', { method: 'POST' });
 }
 
 export async function verifyEmail(otp) {
@@ -96,7 +96,7 @@ export async function setUsername(username) {
 }
 
 /**
- * Redirect to backend Google OAuth. Cookie will be set on callback; use same API origin (VITE_API_URL).
+ * Redirect to backend Google OAuth. Cookie will be set on callback; use same API origin (VITE_PUBLIC_API_URL).
  */
 export function getGoogleLoginUrl() {
   return `${API_URL}/api/auth/google`;

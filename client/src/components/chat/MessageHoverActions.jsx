@@ -12,7 +12,6 @@ import {
 
 export default function MessageHoverActions({
   message,
-  anchor,
   isOwnMessage,
   onReact,
   onReply,
@@ -22,7 +21,6 @@ export default function MessageHoverActions({
   onPin,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [position, setPosition] = useState({ top: 8, left: 8 });
   const actionsRef = useRef(null);
   const menuRef = useRef(null);
 
@@ -37,24 +35,6 @@ export default function MessageHoverActions({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const element = actionsRef.current;
-    if (!element) return;
-
-    const rect = element.getBoundingClientRect();
-    const padding = 8;
-    const desiredTop = Math.max(padding, (anchor?.y ?? 0) - 40);
-    const desiredLeft = Math.max(padding, (anchor?.x ?? 0) + 10);
-
-    const maxLeft = Math.max(padding, window.innerWidth - rect.width - padding);
-    const maxTop = Math.max(padding, window.innerHeight - rect.height - padding);
-
-    const clampedLeft = Math.min(desiredLeft, maxLeft);
-    const clampedTop = Math.min(desiredTop, maxTop);
-
-    setPosition({ top: clampedTop, left: clampedLeft });
-  }, [anchor?.x, anchor?.y, menuOpen]);
-
   const handleCopyText = async () => {
     try {
       await navigator.clipboard.writeText(message?.content || '');
@@ -64,18 +44,20 @@ export default function MessageHoverActions({
   };
 
   return (
-    <motion.div
+    <div
       ref={actionsRef}
-      initial={{ opacity: 0, scale: 0.9, y: 4 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 4 }}
-      transition={{ duration: 0.1 }}
-      className="fixed z-30 flex items-center gap-0.5 rounded-xl border border-[var(--color-base-600)]/60 bg-[var(--color-base-700)] px-1 py-0.5 shadow-lg pointer-events-auto"
-      style={{
-        top: position.top,
-        left: position.left,
-      }}
+      className={`action-toolbar absolute -top-4 right-2 z-30 flex items-center gap-0.5 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] px-1 py-0.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-md backdrop-saturate-[1.8] pointer-events-auto transition-opacity duration-100 ${
+        menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+      }`}
     >
+      <style>{`
+        .action-toolbar::after {
+          content: '';
+          position: absolute;
+          bottom: -8px; left: 0; right: 0;
+          height: 8px;
+        }
+      `}</style>
         <button
           type="button"
           onClick={() => onReact?.(message?._id, '👍')}
@@ -165,6 +147,6 @@ export default function MessageHoverActions({
             </div>
           )}
         </div>
-    </motion.div>
+    </div>
   );
 }

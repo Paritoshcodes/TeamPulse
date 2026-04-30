@@ -1,348 +1,350 @@
 import nodemailer from 'nodemailer';
 import { EventEmitter } from 'events';
 
-// Lightweight email service with optional Bull+Redis queue when REDIS_URL is set.
-// In test/dev (no REDIS_URL) it uses an in-memory immediate queue so no external
-// dependency (Redis) is required for local runs or CI.
-
 let _transporter = null;
-let _testAccount = null;
-const emitter = new EventEmitter(); // emit 'sent' events useful for tests
+const emitter = new EventEmitter();
+
+// -------- VALIDATE ENV (fail fast, no secrets logged) --------
+function getEnv(name, required = true) {
+  const value = process.env[name];
+  if (required && !value) {
+    throw new Error(`Missing required env: ${name}`);
+  }
+  return value;
+}
 
 function envBool(v) {
   return String(v || '').toLowerCase() === 'true';
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// -------- CREATE TRANSPORTER --------
 async function createTransporter() {
   if (_transporter) return _transporter;
 
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-    _transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-      secure: envBool(process.env.SMTP_SECURE),
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      pool: true,
-      maxConnections: 5,
-      connectionTimeout: 10_000,
-    });
-    return _transporter;
-  }
+  const host = getEnv('SMTP_HOST');
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure =
+    typeof process.env.SMTP_SECURE === 'string'
+      ? envBool(process.env.SMTP_SECURE)
+      : port === 465;
 
-  // fallback to Ethereal for dev/test
-  if (!_testAccount) {
-    _testAccount = await nodemailer.createTestAccount();
-  }
+  const user = getEnv('SMTP_USER');
+  const pass = getEnv('SMTP_PASS');
+
   _transporter = nodemailer.createTransport({
-    host: 'smtp.ethereal.email',
-    port: 587,
-    auth: {
-      user: _testAccount.user,
-      pass: _testAccount.pass,
-    },
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    pool: true,
+    maxConnections: 5,
+    connectionTimeout: 10000,
   });
+
   return _transporter;
 }
 
+// -------- SEND MAIL --------
 async function sendMailNow(mail) {
   const transporter = await createTransporter();
   const info = await transporter.sendMail(mail);
-  // log preview URL for Ethereal (or other transports that support it)
-  try {
-    const url = nodemailer.getTestMessageUrl(info);
-    if (url) console.log('[Mail] Preview URL:', url);
-  } catch (_) { }
-  // Emit for tests to know mail was sent
+
+  console.log('[Mail Sent]', {
+    to: mail.to,
+    subject: mail.subject,
+    messageId: info.messageId,
+  });
+
   emitter.emit('sent', { mail, info });
   return info;
 }
 
-// In-memory queue (used when REDIS_URL not set) with simple retry/backoff.
-const inMemoryQueue = {
-  async add(job, opts = { attempts: 3 }) {
-    // Process immediately but return a promise that resolves when processed
-    const attemptSend = async (attempt = 1) => {
-      try {
-        const info = await sendMailNow(job);
-        return info;
-      } catch (err) {
-        if (attempt < (opts.attempts || 1)) {
-          const backoff = 100 * Math.pow(2, attempt - 1);
-          await new Promise((r) => setTimeout(r, backoff));
-          return attemptSend(attempt + 1);
-        }
-        throw err;
-      }
-    };
-    return attemptSend();
-  },
-};
-
-let bullQueue = null;
-let usingBull = false;
-if (process.env.REDIS_URL) {
-  try {
-    const Queue = await import('bull'); // dynamic import to avoid requiring Redis in dev if not configured
-    // Bull v4 uses default export
-    const q = new Queue.default('email', process.env.REDIS_URL);
-    q.process(async (job) => {
-      await sendMailNow(job.data);
-    });
-    bullQueue = q;
-    usingBull = true;
-  } catch (e) {
-    console.warn('Failed to initialize Bull queue for emails (REDIS_URL set?):', e.message || e);
-    usingBull = false;
+// -------- SIMPLE RETRY QUEUE --------
+async function enqueueMail(mail, attempts = 3) {
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await sendMailNow(mail);
+    } catch (err) {
+      if (i === attempts) throw err;
+      const backoff = 200 * Math.pow(2, i);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
   }
 }
 
-export async function enqueueMail(mail, options = { attempts: 3 }) {
-  if (usingBull && bullQueue) {
-    return bullQueue.add(mail, { attempts: options.attempts || 3 });
-  }
-  return inMemoryQueue.add(mail, options);
-}
+// -------- EMAIL TEMPLATE --------
+function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge, heading, subheading, otpCode, expiryMinutes, footerNote }) {
+  const year = new Date().getFullYear();
 
-/**
- * Create a branded email template with HTML and plain text versions
- * @param {string} title - Email title
- * @param {string} htmlContent - HTML content for email body
- * @param {string} textContent - Plain text content for email body
- * @returns {object} Object with html and text properties
- */
-function createEmailTemplate(title, htmlContent, textContent) {
-  const html = `
-<!DOCTYPE html>
+  // Split OTP into individual digit boxes
+  const otpDigits = otpCode
+    ? String(otpCode).split('').map(d => `
+        <td style="padding:0 4px;">
+          <div style="
+            width:48px;
+            height:60px;
+            background:#1e1e2e;
+            border:1.5px solid #2e2e42;
+            border-radius:10px;
+            font-family:'Courier New',monospace;
+            font-size:28px;
+            font-weight:700;
+            color:#e2e8f0;
+            text-align:center;
+            line-height:60px;
+            letter-spacing:0;
+          ">${d}</div>
+        </td>`).join('')
+    : '';
+
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>${title}</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-      background-color: #f5f5f5;
-      line-height: 1.6;
-    }
-    .email-container {
-      max-width: 600px;
-      margin: 40px auto;
-      background-color: #ffffff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-    .email-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      padding: 40px 20px;
-      text-align: center;
-      color: #ffffff;
-    }
-    .email-header h1 {
-      margin: 0;
-      font-size: 28px;
-      font-weight: 600;
-      letter-spacing: -0.5px;
-    }
-    .email-body {
-      padding: 40px 30px;
-      color: #333333;
-    }
-    .email-body h2 {
-      margin: 0 0 20px 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: #1f2937;
-    }
-    .email-body p {
-      margin: 0 0 15px 0;
-      color: #4b5563;
-      font-size: 16px;
-    }
-    .otp-container {
-      background-color: #f9fafb;
-      border: 2px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 30px;
-      text-align: center;
-      margin: 30px 0;
-    }
-    .otp-code {
-      font-size: 36px;
-      font-weight: 700;
-      letter-spacing: 8px;
-      color: #667eea;
-      font-family: 'Courier New', monospace;
-      margin: 10px 0;
-    }
-    .otp-label {
-      font-size: 14px;
-      color: #6b7280;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-    .warning {
-      background-color: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .warning p {
-      margin: 0;
-      color: #92400e;
-      font-size: 14px;
-    }
-    .email-footer {
-      background-color: #f9fafb;
-      padding: 30px;
-      text-align: center;
-      border-top: 1px solid #e5e7eb;
-    }
-    .email-footer p {
-      margin: 5px 0;
-      color: #6b7280;
-      font-size: 14px;
-    }
-    .email-footer a {
-      color: #667eea;
-      text-decoration: none;
-    }
-  </style>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
 </head>
-<body>
-  <div class="email-container">
-    <div class="email-header">
-      <h1>TeamPulse</h1>
-    </div>
-    <div class="email-body">
-      ${htmlContent}
-    </div>
-    <div class="email-footer">
-      <p>&copy; ${new Date().getFullYear()} TeamPulse. All rights reserved.</p>
-      <p>This is an automated message, please do not reply.</p>
-    </div>
+<body style="margin:0;padding:0;background-color:#0f0f17;font-family:Arial,sans-serif;">
+
+  <!-- Preheader (hidden preview text) -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+    ${preheader}&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌
   </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0f0f17;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Card -->
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+
+          <!-- Logo Row -->
+          <tr>
+            <td align="center" style="padding-bottom:28px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="
+                    background:linear-gradient(135deg,${accentColor},#a855f7);
+                    border-radius:14px;
+                    padding:10px 20px;
+                  ">
+                    <span style="
+                      font-family:Arial,sans-serif;
+                      font-size:20px;
+                      font-weight:900;
+                      color:#ffffff;
+                      letter-spacing:-0.5px;
+                    ">⚡ TeamPulse</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Card -->
+          <tr>
+            <td style="
+              background:linear-gradient(160deg,#16162a 0%,#12121f 100%);
+              border-radius:20px;
+              border:1px solid #2a2a3e;
+              overflow:hidden;
+            ">
+
+              <!-- Top accent bar -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="
+                    height:4px;
+                    background:linear-gradient(90deg,${accentColor},#a855f7,#ec4899);
+                    border-radius:20px 20px 0 0;
+                  "></td>
+                </tr>
+              </table>
+
+              <!-- Content -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:44px 48px 40px;">
+
+                    <!-- Badge -->
+                    ${badge ? `
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                      <tr>
+                        <td style="
+                          background:rgba(99,102,241,0.12);
+                          border:1px solid rgba(99,102,241,0.25);
+                          border-radius:100px;
+                          padding:5px 14px;
+                        ">
+                          <span style="font-size:12px;font-weight:600;color:${accentColor};letter-spacing:0.8px;text-transform:uppercase;">${badge}</span>
+                        </td>
+                      </tr>
+                    </table>` : ''}
+
+                    <!-- Heading -->
+                    <h1 style="
+                      margin:0 0 10px;
+                      font-size:28px;
+                      font-weight:800;
+                      color:#f1f5f9;
+                      letter-spacing:-0.5px;
+                      line-height:1.2;
+                    ">${heading}</h1>
+
+                    <!-- Subheading -->
+                    <p style="
+                      margin:0 0 36px;
+                      font-size:15px;
+                      color:#94a3b8;
+                      line-height:1.6;
+                    ">${subheading}</p>
+
+                    <!-- OTP Box -->
+                    ${otpCode ? `
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+                      <tr>${otpDigits}</tr>
+                    </table>
+
+                    <!-- Expiry pill -->
+                    <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+                      <tr>
+                        <td style="
+                          background:#1e1e2e;
+                          border:1px solid #2e2e42;
+                          border-radius:8px;
+                          padding:10px 16px;
+                        ">
+                          <span style="font-size:13px;color:#64748b;">⏱&nbsp;</span>
+                          <span style="font-size:13px;color:#94a3b8;">Expires in&nbsp;</span>
+                          <span style="font-size:13px;font-weight:700;color:#e2e8f0;">${expiryMinutes} minutes</span>
+                        </td>
+                      </tr>
+                    </table>` : ''}
+
+                    <!-- Divider -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
+                      <tr>
+                        <td style="height:1px;background:linear-gradient(90deg,transparent,#2a2a3e,transparent);"></td>
+                      </tr>
+                    </table>
+
+                    <!-- Security note -->
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="
+                          background:rgba(239,68,68,0.06);
+                          border:1px solid rgba(239,68,68,0.12);
+                          border-radius:10px;
+                          padding:14px 16px;
+                        ">
+                          <p style="margin:0;font-size:13px;color:#f87171;line-height:1.5;">
+                            🔒&nbsp;<strong>Never share this code.</strong> TeamPulse will never ask for it via phone or chat.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:28px 0 0;">
+              <p style="margin:0 0 6px;font-size:12px;color:#3d3d56;">
+                © ${year} TeamPulse · Automated message, do not reply
+              </p>
+              ${footerNote ? `<p style="margin:0;font-size:12px;color:#3d3d56;">${footerNote}</p>` : ''}
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
 </body>
 </html>`;
-
-  return { html, text: textContent };
 }
 
+// -------- OTP EMAIL --------
 export async function sendOtpEmail(toEmail, otp) {
   const expiryMinutes = process.env.OTP_EXPIRY_MINUTES || 10;
+  const safeOtp = escapeHtml(String(otp));
+  const safeExpiry = escapeHtml(String(expiryMinutes));
 
-  // HTML content for the email
-  const htmlContent = `
-    <h2>Verify Your Email Address</h2>
-    <p>Thank you for signing up with TeamPulse! To complete your registration, please verify your email address using the code below:</p>
-    
-    <div class="otp-container">
-      <div class="otp-label">Your Verification Code</div>
-      <div class="otp-code">${otp}</div>
-    </div>
-    
-    <p>Enter this code in the verification page to activate your account.</p>
-    
-    <div class="warning">
-      <p><strong>⏱️ Important:</strong> This code will expire in ${expiryMinutes} minutes.</p>
-    </div>
-    
-    <p>If you didn't request this code, please ignore this email or contact support if you have concerns.</p>
-  `;
-
-  // Plain text version for email clients that don't support HTML
-  const textContent = `TeamPulse - Email Verification
-
-Your verification code is: ${otp}
-
-This code will expire in ${expiryMinutes} minutes.
-
-Enter this code in the verification page to activate your account.
-
-If you didn't request this code, please ignore this email.
-
----
-© ${new Date().getFullYear()} TeamPulse. All rights reserved.
-This is an automated message, please do not reply.`;
-
-  const template = createEmailTemplate('Verify Your Email', htmlContent, textContent);
+  const html = createEmailTemplate({
+    title: 'Verify Your Email — TeamPulse',
+    preheader: `Your verification code is ${safeOtp}. Valid for ${safeExpiry} minutes.`,
+    accentColor: '#6366f1',
+    badge: 'Email Verification',
+    heading: 'Verify your email',
+    subheading: 'Enter the code below in TeamPulse to complete your sign-in. Each code is single-use.',
+    otpCode: safeOtp,
+    expiryMinutes: safeExpiry,
+    footerNote: "If you didn't request this, you can safely ignore this email.",
+  });
 
   const mail = {
-    from: process.env.FROM_EMAIL || 'no-reply@teampulse.local',
+    from: `"TeamPulse" <${getEnv('SMTP_FROM_EMAIL')}>`,
     to: toEmail,
-    subject: 'Verify your TeamPulse account',
-    html: template.html,
-    text: template.text,
+    subject: '🔐 Your TeamPulse Verification Code',
+    html,
+    text: `Your TeamPulse OTP is ${otp}. It expires in ${expiryMinutes} minutes. Never share this code.`,
   };
 
-  // enqueue and don't block
-  return enqueueMail(mail).catch((err) => {
-    // bubble error to caller if they want to know; callers may choose to ignore
-    throw err;
-  });
+  return enqueueMail(mail);
 }
 
+// -------- PASSWORD RESET --------
 export async function sendPasswordResetEmail(toEmail, otp) {
   const expiryMinutes = process.env.RESET_OTP_EXPIRY_MINUTES || 10;
+  const safeOtp = escapeHtml(String(otp));
+  const safeExpiry = escapeHtml(String(expiryMinutes));
 
-  const htmlContent = `
-    <h2>Reset Your Password</h2>
-    <p>We received a request to reset your TeamPulse password. Use the code below to continue:</p>
-
-    <div class="otp-container">
-      <div class="otp-label">Your Reset Code</div>
-      <div class="otp-code">${otp}</div>
-    </div>
-
-    <p>If you did not request a password reset, you can safely ignore this email.</p>
-
-    <div class="warning">
-      <p><strong>Notice:</strong> This code will expire in ${expiryMinutes} minutes.</p>
-    </div>
-  `;
-
-  const textContent = `TeamPulse - Password Reset
-
-Your password reset code is: ${otp}
-
-This code will expire in ${expiryMinutes} minutes.
-
-If you did not request a password reset, you can ignore this email.
-
----
-© ${new Date().getFullYear()} TeamPulse. All rights reserved.
-This is an automated message, please do not reply.`;
-
-  const template = createEmailTemplate('Reset Your Password', htmlContent, textContent);
+  const html = createEmailTemplate({
+    title: 'Reset Your Password — TeamPulse',
+    preheader: `Your password reset code is ${safeOtp}. Valid for ${safeExpiry} minutes.`,
+    accentColor: '#f59e0b',
+    badge: 'Password Reset',
+    heading: 'Reset your password',
+    subheading: 'Use the code below to reset your TeamPulse password. If you did not request this, no action is needed.',
+    otpCode: safeOtp,
+    expiryMinutes: safeExpiry,
+    footerNote: "Didn't request a reset? Your account is safe — just ignore this.",
+  });
 
   const mail = {
-    from: process.env.FROM_EMAIL || 'no-reply@teampulse.local',
+    from: `"TeamPulse" <${getEnv('SMTP_FROM_EMAIL')}>`,
     to: toEmail,
-    subject: 'Reset your TeamPulse password',
-    html: template.html,
-    text: template.text,
+    subject: '🔑 Reset Your TeamPulse Password',
+    html,
+    text: `Your TeamPulse password reset code is ${otp}. Expires in ${expiryMinutes} minutes.`,
   };
 
-  return enqueueMail(mail).catch((err) => {
-    throw err;
-  });
+  return enqueueMail(mail);
 }
 
-// Expose sent event for tests
+// -------- EVENTS --------
 export function onMailSent(cb) {
   emitter.on('sent', cb);
 }
 
 export default {
-  enqueueMail,
-  sendMailNow,
   sendOtpEmail,
   sendPasswordResetEmail,
   onMailSent,

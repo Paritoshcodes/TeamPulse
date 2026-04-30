@@ -4,10 +4,8 @@ import { useEffect } from 'react';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import WorkspaceSelector from './pages/WorkspaceSelector.jsx';
-import Login from './pages/Auth/Login.jsx';
-import Register from './pages/Auth/Register.jsx';
+import AuthPage from './pages/Auth/AuthPage.jsx';
 import Callback from './pages/Auth/Callback.jsx';
-import VerifyEmail from './pages/Auth/VerifyEmail.jsx';
 import ForgotPassword from './pages/Auth/ForgotPassword.jsx';
 import ResetPassword from './pages/Auth/ResetPassword.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
@@ -28,8 +26,8 @@ function AnimatedRoutes() {
         className="h-full"
       >
         <Routes location={location}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<AuthPage />} />
+          <Route path="/register" element={<AuthPage />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<Callback />} />
@@ -38,14 +36,6 @@ function AnimatedRoutes() {
             element={
               <ProtectedRoute>
                 <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/verify-email"
-            element={
-              <ProtectedRoute>
-                <VerifyEmail />
               </ProtectedRoute>
             }
           />

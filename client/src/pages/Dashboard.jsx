@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { SocketProvider } from '../context/SocketContext.jsx';
 import * as workspaceService from '../services/workspaceService.js';
@@ -731,6 +731,23 @@ export default function Dashboard() {
   };
 
   const currentWorkspace = activeWorkspace || workspaces.find(w => w._id === selectedWorkspaceId);
+  const currentWorkspaceRole = useMemo(() => {
+    if (!currentWorkspace || !user?._id) return 'guest';
+
+    const ownerId = (currentWorkspace.owner?._id || currentWorkspace.owner || '').toString();
+    if (ownerId && ownerId === user._id.toString()) {
+      return 'owner';
+    }
+
+    const member = (currentWorkspace.members || []).find((entry) => {
+      const entryUserId = (entry?.user?._id || entry?.user || '').toString();
+      return entryUserId && entryUserId === user._id.toString();
+    });
+
+    return member?.role || 'guest';
+  }, [currentWorkspace, user?._id]);
+
+  const canManageWorkspace = currentWorkspaceRole === 'owner' || currentWorkspaceRole === 'admin';
 
   if (loading) {
     return (
@@ -838,7 +855,6 @@ export default function Dashboard() {
           className="h-full overflow-hidden"
         >
           <Sidebar
-            currentUser={user}
             selectedWorkspaceName={currentWorkspace?.name || ''}
             selectedWorkspaceId={selectedWorkspaceId}
             teams={teams}
@@ -864,6 +880,7 @@ export default function Dashboard() {
             }}
             onCreateTeam={openCreateTeamModal}
             onCreateChannel={openCreateChannelModal}
+            canManageWorkspace={canManageWorkspace}
             unreadCounts={{}}
             onChannelAction={(action, channel) => {
               const channelData = typeof channel === 'string'
@@ -880,16 +897,6 @@ export default function Dashboard() {
               }
               if (action === 'copy-link') {
                 toast.success('Channel link copied');
-              }
-            }}
-            availabilityStatus={dashboardOverview?.status || 'available'}
-            onStatusChange={async (status) => {
-              try {
-                await dashboardService.updateAvailabilityStatus(status);
-                setDashboardOverview((prev) => ({ ...prev, status }));
-                toast.success(`Status updated to ${status}`);
-              } catch (err) {
-                toast.error(err.message || 'Failed to update status');
               }
             }}
           />
@@ -1237,16 +1244,14 @@ export default function Dashboard() {
         />
 
         {/* Global Context Menu */}
-        <AnimatePresence>
-          {contextMenu.isOpen && (
-            <ContextMenu
-              isOpen={contextMenu.isOpen}
-              onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
-              position={contextMenu.position}
-              items={contextMenu.items}
-            />
-          )}
-        </AnimatePresence>
+        {contextMenu.isOpen && (
+          <ContextMenu
+            isOpen={contextMenu.isOpen}
+            onClose={() => setContextMenu({ ...contextMenu, isOpen: false })}
+            position={contextMenu.position}
+            items={contextMenu.items}
+          />
+        )}
 
       </OnlineStatusProvider>
     </SocketProvider>

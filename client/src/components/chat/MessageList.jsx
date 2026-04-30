@@ -123,7 +123,6 @@ export default function MessageList({
   const [editingContent, setEditingContent] = useState('');
   const [animateFromIndex, setAnimateFromIndex] = useState(Number.POSITIVE_INFINITY);
   const [hoveredMessageId, setHoveredMessageId] = useState(null);
-  const [hoverAnchor, setHoverAnchor] = useState({ id: null, x: 0, y: 0 });
 
   const groupedMessages = useMemo(() => groupMessages(messages || []), [messages]);
 
@@ -233,24 +232,14 @@ export default function MessageList({
             const avatarSrc = message?.sender?.avatar;
             const hasAnimatedEntry = index >= animateFromIndex;
 
+            const nextMsg = groupedMessages[index + 1];
+            const isLastInGroup = !nextMsg || !nextMsg.isGrouped;
+
             const messageRow = (
               <div
-                className={`group relative flex gap-3 px-4 transition-colors duration-100 hover:bg-[var(--color-base-800)]/40 rounded-lg ${
-                  message.isGrouped ? 'pt-0.5' : 'pt-3'
+                className={`group message-row relative flex gap-3 px-4 transition-colors duration-100 hover:bg-[var(--color-base-800)]/40 rounded-lg ${
+                  message.isGrouped ? 'pt-[2px] pb-[2px]' : 'pt-4 pb-[2px]'
                 }`}
-                onMouseEnter={(event) => {
-                  setHoveredMessageId(message._id);
-                  setHoverAnchor({ id: message._id, x: event.clientX, y: event.clientY });
-                }}
-                onMouseMove={(event) => {
-                  if (hoveredMessageId === message._id) {
-                    setHoverAnchor({ id: message._id, x: event.clientX, y: event.clientY });
-                  }
-                }}
-                onMouseLeave={() => {
-                  setHoveredMessageId(null);
-                  setHoverAnchor((prev) => (prev.id === message._id ? { id: null, x: 0, y: 0 } : prev));
-                }}
               >
                 {!message.isGrouped ? (
                   <div className="w-9 shrink-0 pt-0.5">
@@ -285,9 +274,6 @@ export default function MessageList({
                     <div className="flex items-baseline gap-2">
                       <span className="truncate text-sm font-semibold text-[var(--color-base-100)]">
                         {senderName}
-                      </span>
-                      <span className="text-[0.65rem] text-[var(--color-base-500)]">
-                        {formatMessageTime(message.createdAt)}
                       </span>
                     </div>
                   )}
@@ -338,27 +324,13 @@ export default function MessageList({
                         isOwn={isOwnMessage}
                       />
                     )}
-                  </div>
 
-                  {Array.isArray(message.reactions) && message.reactions.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {getReactionSummary(message.reactions).map((reaction) => (
-                        <button
-                          key={`${message._id}-${reaction.emoji}`}
-                          type="button"
-                          onClick={() => onReact?.(message._id, reaction.emoji)}
-                          className={`flex cursor-pointer items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                            reaction.reacted
-                              ? 'border-[var(--color-brand-500)]/60 bg-[var(--color-brand-500)]/15'
-                              : 'border-[var(--color-base-600)]/60 bg-[var(--color-base-700)] hover:border-[var(--color-brand-500)]/40 hover:bg-[var(--color-brand-500)]/10'
-                          }`}
-                        >
-                          <span>{reaction.emoji}</span>
-                          <span>{reaction.count}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                    {isLastInGroup && (
+                      <div className="text-right text-[0.65rem] text-[var(--color-base-500)] mt-0.5 pr-2" title={formatMessageTime(message.createdAt)}>
+                        {formatMessageTime(message.createdAt)}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="mt-0.5">
                     <MessageReactions
@@ -370,21 +342,16 @@ export default function MessageList({
                   </div>
                 </div>
 
-                <AnimatePresence>
-                  {hoveredMessageId === message._id && (
-                    <MessageHoverActions
-                      message={message}
-                      anchor={hoverAnchor.id === message._id ? hoverAnchor : { x: 0, y: 0 }}
-                      isOwnMessage={isOwnMessage}
-                      onReact={onReact}
-                      onReply={onReply}
-                      onThread={onThread}
-                      onEdit={startEdit}
-                      onDelete={onDelete}
-                      onPin={onPin}
-                    />
-                  )}
-                </AnimatePresence>
+                <MessageHoverActions
+                  message={message}
+                  isOwnMessage={isOwnMessage}
+                  onReact={onReact}
+                  onReply={onReply}
+                  onThread={onThread}
+                  onEdit={startEdit}
+                  onDelete={onDelete}
+                  onPin={onPin}
+                />
               </div>
             );
 

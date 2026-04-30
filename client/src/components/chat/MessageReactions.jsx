@@ -33,15 +33,16 @@ export default function MessageReactions({ messageId, reactions = [], onReact, i
                     whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleReact(emoji)}
+                    title={data.users.map(u => u?.name || u?.username || 'User').join(', ')}
                     className={`
-            inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition-all
+            inline-flex items-center gap-1.5 rounded-[12px] border px-2 py-0.5 text-[13px] transition-all cursor-pointer
             ${data.hasReacted
-                            ? 'border-primary/35 bg-primary/15 text-primary'
-                            : 'border-border/80 bg-background/70 text-muted-foreground hover:bg-accent/20 hover:text-foreground'}
+                            ? 'border-[rgba(0,112,243,0.4)] bg-[rgba(0,112,243,0.15)] text-[var(--color-base-100)]'
+                            : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] text-[var(--color-base-200)] hover:bg-[rgba(255,255,255,0.1)]'}
           `}
                 >
                     <span className="leading-none">{emoji}</span>
-                    <span className="leading-none">{data.count}</span>
+                    <span className="leading-none font-medium">{data.count}</span>
                 </motion.button>
             ))}
 

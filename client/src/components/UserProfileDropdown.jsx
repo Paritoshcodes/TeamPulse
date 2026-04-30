@@ -44,10 +44,10 @@ const getInitials = (name = '') => {
     return String(name || 'U').slice(0, 2).toUpperCase();
 };
 
-const statusDotClass = {
-    available: 'bg-[#22c55e]',
-    busy: 'bg-[#f59e0b]',
-    away: 'bg-[#6b7280]',
+const statusDotColor = {
+    available: 'var(--status-online)',
+    busy: 'var(--status-busy)',
+    away: 'var(--status-away)',
 };
 
 const statusMeta = {
@@ -157,34 +157,35 @@ export default function UserProfileDropdown({
 
             <AnimatePresence>
                 {isOpen && (
-                    <>
-                        <motion.div
-                            ref={dropdownRef}
-                            initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                            transition={{ duration: 0.15 }}
-                            style={{ transformOrigin: 'top right' }}
-                            className="absolute right-0 top-full z-50 mt-2 w-[260px] overflow-hidden rounded-xl border border-[var(--color-base-600)]/60 bg-[var(--color-base-800)]/96 shadow-[0_12px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                    <motion.div
+                        ref={dropdownRef}
+                        key="profile-dropdown"
+                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ transformOrigin: 'top right' }}
+                        className="absolute right-0 top-full z-[9999] mt-2 w-[260px] overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-[16px] backdrop-saturate-[180%]"
                         >
                             <div className="border-b border-[var(--color-base-600)]/40 px-4 py-4">
                                 <div className="flex items-center gap-3">
                                     <div className="relative h-10 w-10">
                                         {user?.avatar ? (
-                                            <img src={user.avatar} alt={displayName} className="h-10 w-10 rounded-full object-cover" />
+                                            <img src={user.avatar} alt={displayName} loading="lazy" className="h-10 w-10 rounded-full object-cover" />
                                         ) : (
                                             <span className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br ${getGradientClass(displayName)} text-sm font-bold text-white`}>
                                                 {getInitials(displayName)}
                                             </span>
                                         )}
                                         <span
-                                            className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-base-800)] ${statusDotClass[optimisticStatus]}`}
+                                            className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[var(--bg-card)]"
+                                            style={{ backgroundColor: statusDotColor[optimisticStatus] || 'var(--status-away)' }}
                                         />
                                     </div>
 
                                     <div className="min-w-0">
-                                        <p className="truncate text-sm font-semibold text-[var(--color-base-50)]">{displayName}</p>
-                                        <p className="truncate text-xs text-[var(--color-base-350)]">@{username}</p>
+                                        <p className="truncate text-sm font-semibold text-[var(--text-primary)]">{displayName}</p>
+                                        <p className="truncate text-xs text-[var(--text-muted)]">@{username}</p>
                                     </div>
                                 </div>
 
@@ -199,7 +200,7 @@ export default function UserProfileDropdown({
                                                 className={`cursor-pointer rounded-full px-2.5 py-1 text-xs transition-all ${
                                                     isActive
                                                         ? value.active
-                                                        : 'text-[var(--color-base-350)] hover:bg-[var(--color-base-700)]/65 hover:text-[var(--color-base-200)]'
+                                                        : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]'
                                                 }`}
                                             >
                                                 {value.label}
@@ -251,8 +252,7 @@ export default function UserProfileDropdown({
                                     Log out
                                 </button>
                             </div>
-                        </motion.div>
-                    </>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

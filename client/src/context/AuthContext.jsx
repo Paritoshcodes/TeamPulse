@@ -28,19 +28,41 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const appearance = user?.settings?.appearance;
     const root = document.documentElement;
-    const preferred = appearance?.theme || 'dark';
+    const preferredRaw = appearance?.theme || 'blue';
+    const preferred = preferredRaw === 'light' ? 'blue' : preferredRaw;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
+    let transitionTimer = null;
 
-    const applyTheme = () => {
-      const resolved = preferred === 'system'
-        ? (media.matches ? 'dark' : 'light')
-        : preferred;
-      root.dataset.theme = resolved;
+    const resolveTheme = () => {
+      if (preferred === 'system') {
+        return media.matches ? 'dark' : 'blue';
+      }
+      return preferred === 'light' ? 'blue' : preferred;
     };
 
-    applyTheme();
+    const applyTheme = (withTransition = false) => {
+      const resolved = resolveTheme();
+
+      if (withTransition) {
+        root.classList.add('theme-transitioning');
+      }
+
+      root.dataset.theme = resolved;
+
+      if (withTransition) {
+        if (transitionTimer) {
+          clearTimeout(transitionTimer);
+        }
+        transitionTimer = setTimeout(() => {
+          root.classList.remove('theme-transitioning');
+          transitionTimer = null;
+        }, 250);
+      }
+    };
+
+    applyTheme(true);
     const handleChange = () => {
-      if (preferred === 'system') applyTheme();
+      if (preferred === 'system') applyTheme(true);
     };
     media.addEventListener?.('change', handleChange);
 
@@ -57,6 +79,10 @@ export function AuthProvider({ children }) {
     root.setAttribute('data-font-scale', String(fontScale));
 
     return () => {
+      if (transitionTimer) {
+        clearTimeout(transitionTimer);
+      }
+      root.classList.remove('theme-transitioning');
       media.removeEventListener?.('change', handleChange);
     };
   }, [user?.settings?.appearance]);

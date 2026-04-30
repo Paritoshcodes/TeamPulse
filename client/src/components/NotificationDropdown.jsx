@@ -316,12 +316,13 @@ export default function NotificationDropdown({
                 {isOpen && (
                     <motion.div
                         ref={dropdownRef}
-                        initial={{ opacity: 0, scale: 0.95, y: -8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: -8 }}
-                        transition={{ duration: 0.15 }}
+                        key="notification-panel"
+                        initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                        transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
                         style={{ transformOrigin: 'top right' }}
-                        className="absolute right-0 top-full z-50 mt-2 flex max-h-[480px] w-[360px] flex-col overflow-hidden rounded-xl border border-[var(--color-base-600)]/60 bg-[var(--color-base-800)]/96 shadow-[0_12px_36px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+                        className="absolute right-0 top-full z-[9999] mt-2 flex max-h-[480px] w-[360px] flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-[16px] backdrop-saturate-[180%]"
                     >
                         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-base-600)]/40 flex-shrink-0">
                             <h3 className="text-sm font-semibold text-[var(--color-base-100)]">Notifications</h3>

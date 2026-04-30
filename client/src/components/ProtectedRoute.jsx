@@ -1,12 +1,15 @@
 import { Navigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import VerifyEmailDialog from './VerifyEmailDialog.jsx';
 
 /**
  * Renders children only when user is authenticated; otherwise redirects to /login.
  */
 export default function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const location = useLocation();
+  const [dialogOpen, setDialogOpen] = useState(true);
 
   if (loading) {
     return (
@@ -21,6 +24,22 @@ export default function ProtectedRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!user?.isEmailVerified) {
+    return (
+      <div className="min-h-screen bg-app">
+        <VerifyEmailDialog
+          isOpen={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onVerified={refreshUser}
+          autoSendOnOpen
+          allowClose={false}
+          showCancel={false}
+          message="Enter the verification code we sent to your email to continue."
+        />
+      </div>
+    );
   }
 
   return children;

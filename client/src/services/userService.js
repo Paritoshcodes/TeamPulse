@@ -1,7 +1,7 @@
 /**
  * User API – profile and settings
  */
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_PUBLIC_API_URL || '';
 
 async function request(path, options = {}) {
   const url = path.startsWith('http') ? path : `${API_URL}${path}`;
@@ -44,6 +44,13 @@ export async function changePassword({ currentPassword, newPassword }) {
   });
 }
 
-export async function searchUsers(query) {
-  return request(`/api/user/search?q=${encodeURIComponent(query || '')}`);
+export async function searchUsers(query, options = {}) {
+  const params = new URLSearchParams({ q: query || '' });
+  if (options.workspaceId) {
+    params.set('workspaceId', options.workspaceId);
+  }
+  if (options.excludeWorkspaceMembers) {
+    params.set('excludeWorkspaceMembers', 'true');
+  }
+  return request(`/api/user/search?${params.toString()}`);
 }

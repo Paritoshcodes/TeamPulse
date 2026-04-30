@@ -27,7 +27,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Uploads (server)
+# Uploads (keep directory structure, ignore files)
+uploads/*
+!uploads/.gitkeep
 server/uploads/
 
 # Coverage

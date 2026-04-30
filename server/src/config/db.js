@@ -4,7 +4,17 @@
  */
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/teampulse';
+function getMongoUri() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    const message = 'Missing required env: MONGODB_URI';
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(message);
+    }
+    return 'mongodb://localhost:27017/teampulse';
+  }
+  return uri;
+}
 
 const options = {
   maxPoolSize: 10,
@@ -19,7 +29,8 @@ export function isConnected() {
 export async function connectDB() {
   if (mongoose.connection.readyState === 1) return;
   try {
-    await mongoose.connect(MONGODB_URI, options);
+    const uri = getMongoUri();
+    await mongoose.connect(uri, options);
     console.log('[DB] MongoDB connected');
   } catch (err) {
     console.error('[DB] MongoDB connection failed:', err.message);

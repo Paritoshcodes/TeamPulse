@@ -2,15 +2,39 @@
  * TeamPulse API Server
  * Entry point: loads env, connects DB, mounts middleware and routes, starts HTTP + Socket.io
  */
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import http from 'http';
 import app from './app.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { initSocket } from './sockets/index.js';
 import { startSchedulers, stopSchedulers } from './services/scheduler.service.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 const PORT = Number(process.env.PORT) || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const PORT_RETRY_ATTEMPTS = Number(process.env.PORT_RETRY_ATTEMPTS) || 10;
+
+function validateSmtpEnv() {
+  const required = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM_EMAIL'];
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length) {
+    throw new Error(`[Config] Missing required SMTP env: ${missing.join(', ')}`);
+  }
+}
+
+function shouldValidateSmtpEnv() {
+  const anySmtpSet = [
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_USER',
+    'SMTP_PASS',
+    'SMTP_FROM_EMAIL',
+  ].some((key) => Boolean(process.env[key]));
+  return process.env.NODE_ENV === 'production' || anySmtpSet;
+}
 
 function listenWithRetry(server, host, startPort, maxAttempts) {
   return new Promise((resolve, reject) => {
@@ -45,6 +69,9 @@ function listenWithRetry(server, host, startPort, maxAttempts) {
 
 async function start() {
   try {
+    if (shouldValidateSmtpEnv()) {
+      validateSmtpEnv();
+    }
     await connectDB();
     const server = http.createServer(app);
     initSocket(server);

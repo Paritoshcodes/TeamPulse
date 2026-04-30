@@ -332,25 +332,23 @@ export default function TopBar({
               </button>
             </motion.div>
 
-            <AnimatePresence>
-              {showNotificationsDropdown && (
-                <NotificationDropdown
-                  isOpen={showNotificationsDropdown}
-                  onOpenChange={setShowNotificationsDropdown}
-                  hideTrigger
-                  triggerRef={bellButtonRef}
-                  notifications={notifications}
-                  loading={notificationsLoading}
-                  onMarkRead={onMarkNotificationRead}
-                  onMarkAllRead={onMarkAllNotificationsRead}
-                  onAcceptConnection={onAcceptConnectionRequest}
-                  onRejectConnection={onRejectConnectionRequest}
-                  onAcceptInvitation={onAcceptInvitation}
-                  onDeclineInvitation={onDeclineInvitation}
-                  onOpenNotification={onOpenNotification}
-                />
-              )}
-            </AnimatePresence>
+            {showNotificationsDropdown && (
+              <NotificationDropdown
+                isOpen={showNotificationsDropdown}
+                onOpenChange={setShowNotificationsDropdown}
+                hideTrigger
+                triggerRef={bellButtonRef}
+                notifications={notifications}
+                loading={notificationsLoading}
+                onMarkRead={onMarkNotificationRead}
+                onMarkAllRead={onMarkAllNotificationsRead}
+                onAcceptConnection={onAcceptConnectionRequest}
+                onRejectConnection={onRejectConnectionRequest}
+                onAcceptInvitation={onAcceptInvitation}
+                onDeclineInvitation={onDeclineInvitation}
+                onOpenNotification={onOpenNotification}
+              />
+            )}
           </div>
 
           <div className="mx-1 h-4 w-px bg-[var(--color-base-600)]" />
@@ -382,18 +380,16 @@ export default function TopBar({
               />
             </button>
 
-            <AnimatePresence>
-              {showProfileDropdown && (
-                <UserProfileDropdown
-                  isOpen={showProfileDropdown}
-                  onOpenChange={setShowProfileDropdown}
-                  hideTrigger
-                  triggerRef={avatarButtonRef}
-                  status={currentUser?.status || 'available'}
-                  onOpenSettings={onOpenSettings}
-                />
-              )}
-            </AnimatePresence>
+            {showProfileDropdown && (
+              <UserProfileDropdown
+                isOpen={showProfileDropdown}
+                onOpenChange={setShowProfileDropdown}
+                hideTrigger
+                triggerRef={avatarButtonRef}
+                status={currentUser?.status || 'available'}
+                onOpenSettings={onOpenSettings}
+              />
+            )}
           </div>
         </div>
       </div>
