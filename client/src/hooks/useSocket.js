@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import * as authService from '../services/authService.js';
 
-const WS_URL = import.meta.env.VITE_PUBLIC_WS_URL || import.meta.env.VITE_PUBLIC_API_URL || '';
+const WS_URL = import.meta.env.VITE_PUBLIC_WS_URL || import.meta.env.VITE_PUBLIC_API_URL || import.meta.env.VITE_API_URL || '';
 
 export function useSocket() {
   const [connected, setConnected] = useState(false);

@@ -1,7 +1,7 @@
 /**
  * Invitation service – API calls for inviting users to workspaces
  */
-const API_URL = import.meta.env.VITE_PUBLIC_API_URL || '';
+const API_URL = import.meta.env.VITE_PUBLIC_API_URL || import.meta.env.VITE_API_URL || '';
 
 export async function createInvitation({ inviteeEmail, scope = 'workspace', workspaceId, teamId, channelId, role = 'member' }) {
   const body = { inviteeEmail, scope, role };
