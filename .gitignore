@@ -41,4 +41,4 @@ coverage/
 .cache/
 .github/
 artifacts/
-bug.txt
+uploads/
