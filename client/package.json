@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:client": "vite",
-    "build": "vite build",
+    "build": "npm install @rollup/rollup-linux-x64-gnu --no-save && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
   },
