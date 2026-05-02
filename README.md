@@ -1,11 +1,5 @@
-<div align="center">
-  <img src="https://raw.githubusercontent.com/Paritoshcodes/TeamPulse/main/client/public/favicon.ico" width="80" alt="TeamPulse Logo">
-  <h1 align="center">TeamPulse</h1>
-  <p align="center">
-    <strong>A high-performance, real-time team collaboration and messaging platform.</strong>
-  </p>
-  
-  <p align="center">
+<p align="center">
+    <a href="https://team-pulse-client-x2oh.vercel.app/">🚀 Live Demo</a> •
     <a href="#features">Features</a> •
     <a href="#tech-stack">Tech Stack</a> •
     <a href="#getting-started">Getting Started</a> •
@@ -124,7 +118,7 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 RESEND_API_KEY=re_your_api_key
 ```
 
-> **Note:** The default sender is `TeamPulse <onboarding@resend.dev>` (Resend's sandbox). Sandbox emails can only be delivered to the email on your Resend account. To send to any address, [verify a custom domain](https://resend.com/docs/dashboard/domains/introduction) on Resend.
+> **Note:** Requires a verified [Resend](https://resend.com) domain and API key for OTP email delivery.
 
 ---
 
