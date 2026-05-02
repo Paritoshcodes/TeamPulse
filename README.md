@@ -44,7 +44,7 @@
 - **Real-time**: Socket.io
 - **Job Queue**: Bull & Redis (for background processing)
 - **Authentication**: Passport.js & JWT
-- **Email**: Nodemailer
+- **Email**: Resend
 
 ---
 
@@ -120,13 +120,11 @@ JWT_EXPIRES_IN=7d
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Email / Nodemailer (Required for OTP)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-EMAIL_FROM=noreply@teampulse.com
+# Email / Resend (Required for OTP)
+RESEND_API_KEY=re_your_api_key
 ```
+
+> **Note:** The default sender is `TeamPulse <onboarding@resend.dev>` (Resend's sandbox). Sandbox emails can only be delivered to the email on your Resend account. To send to any address, [verify a custom domain](https://resend.com/docs/dashboard/domains/introduction) on Resend.
 
 ---
 

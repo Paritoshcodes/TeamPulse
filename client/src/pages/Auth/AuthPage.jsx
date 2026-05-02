@@ -347,7 +347,7 @@ export default function AuthPage() {
       await login(loginForm.email, loginForm.password);
       navigate('/');
     } catch (err) {
-      setLoginError(err?.response?.data?.message || 'Invalid credentials. Please try again.');
+      setLoginError(err?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoginLoading(false);
     }
@@ -373,7 +373,7 @@ export default function AuthPage() {
     try {
       await register(name, email, password, username);
     } catch (err) {
-      setRegisterError(err?.response?.data?.message || 'Registration failed. Please try again.');
+      setRegisterError(err?.message || 'Registration failed. Please try again.');
     } finally {
       setRegisterLoading(false);
     }

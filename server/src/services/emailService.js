@@ -1,22 +1,16 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import { EventEmitter } from 'events';
 
-let _transporter = null;
 const emitter = new EventEmitter();
 
-// -------- VALIDATE ENV (fail fast, no secrets logged) --------
-function getEnv(name, required = true) {
-  const value = process.env[name];
-  if (required && !value) {
-    throw new Error(`Missing required env: ${name}`);
-  }
-  return value;
+// -------- RESEND CLIENT --------
+function getResend() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('Missing required env: RESEND_API_KEY');
+  return new Resend(apiKey);
 }
 
-function envBool(v) {
-  return String(v || '').toLowerCase() === 'true';
-}
-
+// -------- HELPERS --------
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -26,46 +20,29 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-// -------- CREATE TRANSPORTER --------
-async function createTransporter() {
-  if (_transporter) return _transporter;
-
-  const host = getEnv('SMTP_HOST');
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure =
-    typeof process.env.SMTP_SECURE === 'string'
-      ? envBool(process.env.SMTP_SECURE)
-      : port === 465;
-
-  const user = getEnv('SMTP_USER');
-  const pass = getEnv('SMTP_PASS');
-
-  _transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-    pool: true,
-    maxConnections: 5,
-    connectionTimeout: 10000,
+// -------- SEND MAIL VIA RESEND --------
+async function sendMailNow(mail) {
+  const resend = getResend();
+  const { data, error } = await resend.emails.send({
+    from: mail.from,
+    to: Array.isArray(mail.to) ? mail.to : [mail.to],
+    subject: mail.subject,
+    html: mail.html,
+    text: mail.text,
   });
 
-  return _transporter;
-}
-
-// -------- SEND MAIL --------
-async function sendMailNow(mail) {
-  const transporter = await createTransporter();
-  const info = await transporter.sendMail(mail);
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error));
+  }
 
   console.log('[Mail Sent]', {
     to: mail.to,
     subject: mail.subject,
-    messageId: info.messageId,
+    messageId: data?.id,
   });
 
-  emitter.emit('sent', { mail, info });
-  return info;
+  emitter.emit('sent', { mail, info: data });
+  return data;
 }
 
 // -------- SIMPLE RETRY QUEUE --------
@@ -85,7 +62,6 @@ async function enqueueMail(mail, attempts = 3) {
 function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge, heading, subheading, otpCode, expiryMinutes, footerNote }) {
   const year = new Date().getFullYear();
 
-  // Split OTP into individual digit boxes
   const otpDigits = otpCode
     ? String(otpCode).split('').map(d => `
         <td style="padding:0 4px;">
@@ -117,7 +93,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
 </head>
 <body style="margin:0;padding:0;background-color:#0f0f17;font-family:Arial,sans-serif;">
 
-  <!-- Preheader (hidden preview text) -->
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
     ${preheader}&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌&nbsp;‌
   </div>
@@ -126,10 +101,8 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
     <tr>
       <td align="center" style="padding:40px 16px;">
 
-        <!-- Card -->
         <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
 
-          <!-- Logo Row -->
           <tr>
             <td align="center" style="padding-bottom:28px;">
               <table cellpadding="0" cellspacing="0" border="0">
@@ -152,7 +125,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
             </td>
           </tr>
 
-          <!-- Main Card -->
           <tr>
             <td style="
               background:linear-gradient(160deg,#16162a 0%,#12121f 100%);
@@ -161,7 +133,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
               overflow:hidden;
             ">
 
-              <!-- Top accent bar -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="
@@ -172,12 +143,10 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
                 </tr>
               </table>
 
-              <!-- Content -->
               <table width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="padding:44px 48px 40px;">
 
-                    <!-- Badge -->
                     ${badge ? `
                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
                       <tr>
@@ -192,7 +161,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
                       </tr>
                     </table>` : ''}
 
-                    <!-- Heading -->
                     <h1 style="
                       margin:0 0 10px;
                       font-size:28px;
@@ -202,7 +170,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
                       line-height:1.2;
                     ">${heading}</h1>
 
-                    <!-- Subheading -->
                     <p style="
                       margin:0 0 36px;
                       font-size:15px;
@@ -210,13 +177,11 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
                       line-height:1.6;
                     ">${subheading}</p>
 
-                    <!-- OTP Box -->
                     ${otpCode ? `
                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
                       <tr>${otpDigits}</tr>
                     </table>
 
-                    <!-- Expiry pill -->
                     <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
                       <tr>
                         <td style="
@@ -232,14 +197,12 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
                       </tr>
                     </table>` : ''}
 
-                    <!-- Divider -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;">
                       <tr>
                         <td style="height:1px;background:linear-gradient(90deg,transparent,#2a2a3e,transparent);"></td>
                       </tr>
                     </table>
 
-                    <!-- Security note -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td style="
@@ -262,7 +225,6 @@ function createEmailTemplate({ title, preheader, accentColor = '#6366f1', badge,
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td align="center" style="padding:28px 0 0;">
               <p style="margin:0 0 6px;font-size:12px;color:#3d3d56;">
@@ -300,14 +262,21 @@ export async function sendOtpEmail(toEmail, otp) {
   });
 
   const mail = {
-    from: `"TeamPulse" <${getEnv('SMTP_FROM_EMAIL')}>`,
+    from: 'TeamPulse <noreply@paritoshsingh.me>',
     to: toEmail,
     subject: '🔐 Your TeamPulse Verification Code',
     html,
     text: `Your TeamPulse OTP is ${otp}. It expires in ${expiryMinutes} minutes. Never share this code.`,
   };
 
-  return enqueueMail(mail);
+  try {
+    const result = await enqueueMail(mail);
+    console.log(`[OTP] Email sent to ${toEmail}`);
+    return result;
+  } catch (err) {
+    console.error(`[OTP] Failed: ${err.message || err}`);
+    throw err;
+  }
 }
 
 // -------- PASSWORD RESET --------
@@ -329,14 +298,21 @@ export async function sendPasswordResetEmail(toEmail, otp) {
   });
 
   const mail = {
-    from: `"TeamPulse" <${getEnv('SMTP_FROM_EMAIL')}>`,
+    from: 'TeamPulse <noreply@paritoshsingh.me>',
     to: toEmail,
     subject: '🔑 Reset Your TeamPulse Password',
     html,
     text: `Your TeamPulse password reset code is ${otp}. Expires in ${expiryMinutes} minutes.`,
   };
 
-  return enqueueMail(mail);
+  try {
+    const result = await enqueueMail(mail);
+    console.log(`[OTP] Email sent to ${toEmail}`);
+    return result;
+  } catch (err) {
+    console.error(`[OTP] Failed: ${err.message || err}`);
+    throw err;
+  }
 }
 
 // -------- EVENTS --------
